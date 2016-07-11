@@ -100,6 +100,36 @@ pm32_putstr:
 .done:
   ret
 
+pm32_puthexdigit:
+  mov dl, [hex_digit_lookup_str + edx]
+  jmp pm32_putchar
+
+pm32_puthex:
+  push edx
+  mov dl, '0'
+  call pm32_putchar
+  mov dl, 'x'
+  call pm32_putchar
+  pop edx
+  mov eax, ecx
+  mov cl, 32
+.puthex:
+  sub cl, 4
+  push edx
+  shr edx, cl
+  and edx, 0xf
+  xchg eax, ecx
+  call pm32_puthexdigit
+  xchg eax, ecx
+  pop edx
+  cmp cl, 0
+  jnz .puthex
+  ret
+
+pm32_get_eip:
+  mov eax, [esp]
+  ret
+
 ; check if cpuid is supported by attempting to flip the id bit (bit 21) in
 ; the flags register. if we can flip it, cpuid is available.
 pm32_check_cpuid_supported:
@@ -160,17 +190,43 @@ _start:
   push eax ; Multiboot magic
   push ebx ; Miltiboot info
 
-  cli
+  cli      ; turn off interrupts for the time being
 
+  ; print hello world string to screen
   mov ecx, TEXT_SCREEN_MEMORY
   mov edx, hello_world_str
   call pm32_putstr
 
+  ; ensure we can use long mode, and print an error otherwise
   call pm32_check_long_mode_supported
 
+  ; tell the user we can use long mode
   mov ecx, TEXT_SCREEN_MEMORY+TEXT_SCREEN_ROW
   mov edx, long_mode_supported_str
   call pm32_putstr
+
+  ; disable paging (just in case multiboot happened to enable it)
+  mov eax, cr0        ; Set the A-register to control register 0.
+  and eax, 0x7fffffff ; Clear the PG-bit, which is bit 31.
+  mov cr0, eax        ; Set control register 0 to the A-register.
+
+  mov ecx, TEXT_SCREEN_MEMORY+2*TEXT_SCREEN_ROW
+  mov edx, instruction_ptr_str
+  call pm32_putstr
+  call pm32_get_eip ; load eip into eax
+  mov edx, eax
+  call pm32_puthex
+
+  ; TODO: print out current eip
+  ; TODO: set up paging
+
+  ; tell the user we've set up paging
+  mov ecx, TEXT_SCREEN_MEMORY+3*TEXT_SCREEN_ROW
+  mov edx, paging_set_up_str
+  call pm32_putstr
+
+  ; TODO: far jump to 64-bit land
+  ; TODO: print out the current rip to make sure we're in 64-bit land
 
 hang:
   hlt
@@ -180,9 +236,12 @@ hang:
 
 section .data
 hello_world_str: db "Hello World!", 0
+instruction_ptr_str: db "Current instruction pointer is ", 0
 long_mode_supported_str: db "Long mode seems to be supported! :)", 0
+paging_set_up_str: db "Finished setting up 64-bit paging!", 0
 error_no_cpuid_str: db "Error: The CPUID instruction does not appear to be supported!", 0
 error_no_long_mode_str: db "Error: Long mode does not appear to be supported!", 0
+hex_digit_lookup_str: db "0123456789abcdef", 0
 
 
 
