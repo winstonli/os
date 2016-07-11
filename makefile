@@ -1,6 +1,10 @@
 ASMFILES := $(shell find . -type f -name '*.s')
 OBJFILES := $(ASMFILES:.s=.o)
 
+qemu: kernel.iso
+	qemu-system-x86_64 $<
+.PHONY: qemu
+
 kernel.iso: kernel grub.cfg
 	mkdir -p iso/boot/grub
 	cp kernel iso/boot/kernel
@@ -16,5 +20,8 @@ kernel: $(OBJFILES)
 	nasm -f elf $^ -o $@
 
 clean:
-	rm -fv *.o
+	find . -type f -name '*.o' | xargs rm -f
+	rm -f kernel.iso
+	rm -f kernel
+	rm -rf iso/
 .PHONY: clean
