@@ -1,6 +1,9 @@
 global start
 global _start
 extern kernel_main ; Defined in main.cpp
+extern link_text_start
+extern link_data_end
+extern link_bss_end
 
 ; Multiboot Header Definitions
 MAGIC equ 0xe85250d6
@@ -19,10 +22,10 @@ TAG_TYPE_MODULE_ALIGNMENT equ 6
 TAG_REQUIRED equ 0
 TAG_OPTIONAL equ 1
 
-HEADER_ADDR equ multiboot_header ; TODO hardcoded magic, get from linker script
-LOAD_ADDR equ start ; TODO this could be wrong if start is not at the beginning of the text/data
-LOAD_END_ADDR equ 0 ; TODO with this as 0, the whole file is assumed to be text/data so bss will not be handled correctly
-BSS_ADDR equ 0 ; TODO we currently have no bss segment
+HEADER_ADDR equ multiboot_header ; the physical address of the multiboot header
+LOAD_START_ADDR equ link_text_start ; the address of the start of .text/.data
+LOAD_END_ADDR equ link_data_end ; the address of the end of .text/.data
+BSS_END_ADDR equ link_bss_end ; the address of the end of .bss
 
 section .multiboot
 align 8, db 0 ; pad with 0s to align to 64-bit boundary
@@ -39,9 +42,9 @@ align 8, db 0
   dw TAG_OPTIONAL
   dd (.addr_tag_end - .addr_tag)
   dd HEADER_ADDR
-  dd LOAD_ADDR
+  dd LOAD_START_ADDR
   dd LOAD_END_ADDR
-  dd BSS_ADDR
+  dd BSS_END_ADDR
 .addr_tag_end:
 align 8, db 0
 .entry_tag:
@@ -76,11 +79,9 @@ STACKSIZE equ 0x4000
 
 start:
 _start:
-;    mov esp, stack+STACKSIZE ; Stack setup
-;    push eax ; Multiboot magic
-;    push ebx ; Miltiboot info
-;
-;    call kernel_main ; Call C kernel
+  mov esp, stack+STACKSIZE ; Stack setup
+  push eax ; Multiboot magic
+  push ebx ; Miltiboot info
 
   cli
   mov dword [0xb8000], 0x07690748
@@ -89,7 +90,7 @@ hang:
   hlt
   jmp hang
 
-;section .bss
-;align 4
-;stack:
-;    resb STACKSIZE
+section .bss
+align 4
+stack:
+  resb STACKSIZE
