@@ -1,4 +1,5 @@
-ENTRY (loader)
+OUTPUT_FORMAT("binary")
+ENTRY(start)
 SECTIONS
 {
   . = 0x00100000;
@@ -6,8 +7,8 @@ SECTIONS
   link_kernel_start = .;
 
   /* Multiboot header must be in the first 4K of the kernel */
-  .mbheader : {
-    *(.mbheader)
+  .multiboot : {
+    *(.multiboot)
   }
 
   .text : {

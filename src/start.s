@@ -1,23 +1,30 @@
-global loader
+global start
+global _start
 extern kernel_main ; Defined in main.cpp
 
-; Multiboot Header
-FLAGS equ 0
+; Multiboot Header Definitions
 MAGIC equ 0xe85250d6
-CHECKSUM equ -(MAGIC + FLAGS)
+ARCHITECTURE equ 0 ; 0 for 32-bit protected, 4 for 32-bit MIPS
+HEADER_LENGTH equ (multiboot_header_end-multiboot_header)
+CHECKSUM equ -(MAGIC + ARCHITECTURE + HEADER_LENGTH)
 
-section .mbheader
-align 4
-MultiBootHeader:
+
+section .multiboot
+align 8, db 0 ; pad with 0s to align to 64-bit boundary
+multiboot_header:
     dd MAGIC
-    dd FLAGS
+    dd ARCHITECTURE
+    dd HEADER_LENGTH
     dd CHECKSUM
+.tags:
+multiboot_header_end:
 
 section .text
 
 STACKSIZE equ 0x4000
 
-loader:
+start:
+_start:
 ;    mov esp, stack+STACKSIZE ; Stack setup
 ;    push eax ; Multiboot magic
 ;    push ebx ; Miltiboot info

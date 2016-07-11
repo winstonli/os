@@ -10,11 +10,9 @@ kernel.iso: kernel grub.cfg
 	cp kernel iso/boot/kernel
 	cp grub.cfg iso/boot/grub/grub.cfg
 	grub-mkrescue -o $@ iso
-	rm -rf iso
 
-
-kernel: $(OBJFILES)
-	ld -melf_i386 -nostdlib -T linker.ld $^ -o $@
+kernel: linker.ld $(OBJFILES)
+	ld -melf_i386 -nostdlib -T linker.ld $(OBJFILES) -o $@
 
 %.o: %.s
 	nasm -f elf $^ -o $@
