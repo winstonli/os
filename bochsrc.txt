@@ -1,0 +1,7 @@
+log: bochsout.log
+
+display_library: sdl
+
+# CD-ROM image
+ata0-slave:  type=cdrom, path="kernel.iso", status=inserted
+boot: cdrom

@@ -1,8 +1,15 @@
 ASMFILES := $(shell find . -type f -name '*.s')
 OBJFILES := $(ASMFILES:.s=.o)
 
+all: kernel.iso
+.PHONY: all
+
 qemu: kernel.iso
 	qemu-system-x86_64 $<
+.PHONY: qemu
+
+bochs: kernel.iso bochsrc.txt
+	bochs
 .PHONY: qemu
 
 kernel.iso: kernel grub.cfg
