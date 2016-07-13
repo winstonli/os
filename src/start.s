@@ -39,6 +39,19 @@ multiboot_header:
 
 .tags:
 align 8, db 0
+.info_req_tag:
+  dw TAG_TYPE_INFORMATION_REQUEST
+  dw TAG_REQUIRED
+  dd (.info_req_tag_end - .info_req_tag)
+  dd 1
+  dd 2
+  dd 3
+  dd 4 ; TODO: magic number (basic meminfo)
+  dd 5
+  dd 6
+  dd 7
+.info_req_tag_end:
+align 8, db 0
 .addr_tag:
   dw TAG_TYPE_ADDRESS
   dw TAG_OPTIONAL
@@ -124,6 +137,7 @@ pm32_puthex:
   pop edx
   cmp cl, 0
   jnz .puthex
+  mov ecx, eax
   ret
 
 pm32_get_eip:
@@ -236,10 +250,52 @@ _start:
   mov edx, eax
   call pm32_puthex
 
+  ; print address of multiboot information structure
+  mov ecx, TEXT_SCREEN_MEMORY+3*TEXT_SCREEN_ROW
+  mov edx, multiboot_info_ptr_str
+  call pm32_putstr
+  pop edx
+  push edx
+  call pm32_puthex
+
+  mov ecx, TEXT_SCREEN_MEMORY+4*TEXT_SCREEN_ROW
+
+  pop edx
+  push edx
+  lea esi, [edx+8]
+.parse_multiboot_header
+  mov eax, [esi] ; type
+  mov ebx, [esi+4] ; size
+  cmp eax, 4
+  jne .not_basic_mem_info
+  mov dl, 'm'
+  call pm32_putchar
+  mov edx, [esi+8]
+  call pm32_puthex
+  mov dl, '-'
+  call pm32_putchar
+  mov edx, [esi+12]
+  call pm32_puthex
+  jmp .parse_multiboot_header_next
+.not_basic_mem_info:
+  cmp eax, 0
+  je .parse_multiboot_header_end
+.parse_multiboot_header_next:
+  add esi, ebx
+.parse_multiboot_header_next2:
+  test esi, 0x7
+  jz .parse_multiboot_header
+  inc esi
+  jmp .parse_multiboot_header_next2
+
+
+
+.parse_multiboot_header_end:
+
   ; TODO: set up paging
 
   ; tell the user we've set up paging
-  mov ecx, TEXT_SCREEN_MEMORY+3*TEXT_SCREEN_ROW
+  mov ecx, TEXT_SCREEN_MEMORY+5*TEXT_SCREEN_ROW
   mov edx, paging_set_up_str
   call pm32_putstr
 
@@ -255,6 +311,7 @@ hang:
 section .data
 hello_world_str: db "Hello World!", 0
 instruction_ptr_str: db "Current instruction pointer is ", 0
+multiboot_info_ptr_str: db "Multiboot information structure is at ", 0
 long_mode_supported_str: db "Long mode seems to be supported! :)", 0
 paging_set_up_str: db "Finished setting up 64-bit paging!", 0
 error_wrong_magic_str: db "Error: Incorrect multiboot magic number!", 0
