@@ -1,4 +1,5 @@
 *.o
+*.mod
 *.iso
 kernel*
 *.log
