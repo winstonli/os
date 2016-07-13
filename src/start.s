@@ -306,10 +306,16 @@ _start:
   call pm32_putchar
   mov dl, '='
   call pm32_putchar
-  lea edx, [esi+4*4]
+  lea edx, [esi+4*4] ; module path
   call pm32_putstr
+  mov dl, '@'
+  call pm32_putchar
+  mov edx, [esi+2*4] ; module start
+  call pm32_puthex
   mov dl, ' '
   call pm32_putchar
+  mov edx, [esi+2*4] ; module start
+  call edx
   jmp .parse_multiboot_header_next
 
 .not_module:

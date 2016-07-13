@@ -1,6 +1,7 @@
 *.o
 *.mod
 *.iso
-kernel*
+kernel
+kernel.iso
 *.log
 iso/

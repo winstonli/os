@@ -1,9 +1,9 @@
 MODULES := hello.mod
 
-ASMFILES := $(shell find . -type f -name '*.s')
+ASMFILES := src/start.s
 OBJFILES := $(ASMFILES:.s=.o)
 
-CXXFLAGS += --target=i686-pc-none-elf -march=i686 -I/home/george/grub/include/ -I/home/george/grub/
+CXXFLAGS += --target=i686-pc-none-elf -march=i686
 
 LDFLAGS := -melf_i386 -nostdlib
 
@@ -25,14 +25,14 @@ kernel.iso: kernel grub.cfg $(MODULES)
 	cp $(MODULES) iso/boot/
 	grub-mkrescue -o $@ iso
 
-kernel: linker.ld $(OBJFILES)
-	ld $(LDFLAGS) -T linker.ld $(OBJFILES) -o $@
+kernel: kernel.ld $(OBJFILES)
+	ld $(LDFLAGS) -T kernel.ld $(OBJFILES) -o $@
 
 %.o: %.s
 	nasm -f elf $^ -o $@
 
 %.mod: %.o
-	ld $(LDFLAGS) -r -o $@ $^
+	ld $(LDFLAGS) -T module.ld -r -o $@ $^
 
 %.o: %.c
 	clang $(CXXFLAGS) -c -o $@ $<
