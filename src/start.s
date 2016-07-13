@@ -1,25 +1,33 @@
 [bits 32]
+
 global start
 global _start
-extern kernel_main ; Defined in main.cpp
-extern link_text_start
+
+extern kernel_main ; defined in main.cpp
+
+extern link_text_start ; defined by linker.ld
 extern link_data_end
 extern link_bss_end
 
-; Multiboot Header Definitions
+; multiboot header definitions
 MAGIC equ 0xe85250d6
 ARCHITECTURE equ 0 ; 0 for 32-bit protected, 4 for 32-bit MIPS
 HEADER_LENGTH equ (multiboot_header_end-multiboot_header)
 CHECKSUM equ -(MAGIC + ARCHITECTURE + HEADER_LENGTH)
 
-TAG_TYPE_NULL equ 0
-TAG_TYPE_INFORMATION_REQUEST equ 1
-TAG_TYPE_ADDRESS equ 2
-TAG_TYPE_ENTRY equ 3
+TAG_TYPE_NULL equ 0 ; null tag type to signify end of tag list
+TAG_TYPE_INFORMATION_REQUEST equ 1 ; request information (e.g. memory map
+                                   ; or loaded modules), however grub does
+                                   ; this without asking
+TAG_TYPE_ADDRESS equ 2 ; specify where to load this data into physical memory
+TAG_TYPE_ENTRY equ 3 ; specify entry point
 TAG_TYPE_FLAGS equ 4
 TAG_TYPE_FRAMEBUFFER equ 5
-TAG_TYPE_MODULE_ALIGNMENT equ 6
+TAG_TYPE_MODULE_ALIGNMENT equ 6 ; requst that modules are loaded aligned to
+                                ; a page boundary, however grub does this
+                                ; without asking
 
+; specifies whether the bootloader should fail if it does not support a tag
 TAG_REQUIRED equ 0
 TAG_OPTIONAL equ 1
 
@@ -28,24 +36,23 @@ LOAD_START_ADDR equ link_text_start ; the address of the start of .text/.data
 LOAD_END_ADDR equ link_data_end ; the address of the end of .text/.data
 BSS_END_ADDR equ link_bss_end ; the address of the end of .bss
 
+MULTIBOOT_ALIGNMENT equ 8
+
 
 
 section .multiboot
-align 8, db 0 ; pad with 0s to align to 64-bit boundary
+align MULTIBOOT_ALIGNMENT, db 0 ; pad with 0s to align to 64-bit boundary
 multiboot_header:
   dd MAGIC ; magic number so grub2 will find us
   dd ARCHITECTURE ; x86, 32-bit protected mode
   dd HEADER_LENGTH
   dd CHECKSUM ; must be 0 when above three fields are added
 
+; we should technically have an information request here for modules, but
+; since grub provides it regardless we omit it for now. (similarly we may
+; also want to have aligned modules, unsure)
 .tags:
-align 8, db 0
-.info_req_tag:
-  dw TAG_TYPE_INFORMATION_REQUEST
-  dw TAG_REQUIRED
-  dd (.info_req_tag_end - .info_req_tag)
-.info_req_tag_end:
-align 8, db 0
+align MULTIBOOT_ALIGNMENT, db 0
 .addr_tag:
   dw TAG_TYPE_ADDRESS
   dw TAG_OPTIONAL
@@ -55,14 +62,14 @@ align 8, db 0
   dd LOAD_END_ADDR
   dd BSS_END_ADDR
 .addr_tag_end:
-align 8, db 0
+align MULTIBOOT_ALIGNMENT, db 0
 .entry_tag:
   dw TAG_TYPE_ENTRY
   dw TAG_OPTIONAL
   dd (.entry_tag_end - .entry_tag)
-  dd start
+  dd start ; entry point!
 .entry_tag_end:
-align 8, db 0
+align MULTIBOOT_ALIGNMENT, db 0
 ; Makes us a nice screen to work with, but 0x8b000 is easier for debugging
 ; purposes for the time being, so we'll uncomment this later if we want it.
 ; .framebuffer_tag:
@@ -73,9 +80,9 @@ align 8, db 0
 ;   dd 768
 ;   dd 32
 ; .framebuffer_tag_end:
-; align 8, db 0
+; align MULTIBOOT_ALIGNMENT, db 0
 .null_tag:
-  dw TAG_TYPE_NULL
+  dw TAG_TYPE_NULL ; this lets the bootloader know that we have run out of tags
   dw 0
   dd (.null_tag_end - .null_tag)
 .null_tag_end:
@@ -86,15 +93,22 @@ multiboot_header_end:
 
 section .text
 
+TEXT_SCREEN_MEMORY equ 0xb8000 ; address of the text screen video memory
+                               ; (80x25 w/ one byte each for colour and ascii)
 TEXT_SCREEN_ROW equ 80*2 ; 80 characters wide, 2 bytes per character
-TEXT_SCREEN_MEMORY equ 0xb8000 + TEXT_SCREEN_ROW*10
+TEXT_WHITE_ON_BLACK equ 0x07
 
+; print the character in dl to the screen at position given by ecx,
+; then increment ecx in preparation for next character
 pm32_putchar:
-  mov dh, 0x07
+  mov dh, TEXT_WHITE_ON_BLACK
   mov [ecx], dx
   add ecx, 2
   ret
 
+; print the \0-terminated string given by edx to the screen at position given
+; by ecx, returning edx pointing to the end of the string and ecx pointing to
+; the screen at the position after the final character
 pm32_putstr:
   cmp byte [edx], 0
   je .done
@@ -107,51 +121,70 @@ pm32_putstr:
 .done:
   ret
 
+; print the character corresponding to the value of dl in hexadecimal
+; assumes that dl is in the range [0-15] inclusive, see putchar
 pm32_puthexdigit:
   mov dl, [hex_digit_lookup_str + edx]
   jmp pm32_putchar
 
+; writes a 32-bit hexadecimal number of the screen at ecx with a '0x' prefix
 pm32_puthex:
   push edx
+  ; draw '0x' prefix
   mov dl, '0'
   call pm32_putchar
   mov dl, 'x'
   call pm32_putchar
   pop edx
+  ; if we are dealing with a value that is exactly 0, we can just print that
+  ; (which avoids accidentally printing "0x" by itself when trimming leading
+  ; zeros)
   cmp edx, 0
   jne .not_zero
   mov dl, '0'
   call pm32_putchar
   ret
 .not_zero:
-  push eax
-  mov eax, ecx
-  mov cl, 32
+  push eax ; caller-saved eax
+  mov eax, ecx ; need to move ecx and eax around since only cl can be used
+               ; for shifts.
+  mov cl, 32 ; how much do we need to shift to get the value of the next digit
   mov ch, 0 ; have we written a non-zero char yet?
 .puthex:
   sub cl, 4
-  push edx
-  shr edx, cl
+  push edx ; save the original number for the next comparison
+
+  shr edx, cl ; shift right and "and" with 0xf to get least-significant-digit
   and edx, 0xf
-  cmp edx, 0x0
+
+  cmp edx, 0x0 ; if its 0, check if we've already had a nonzero character
   je .skip_digit_maybe
   jmp .no_skip_digit
 .skip_digit_maybe:
   cmp ch, 0
-  je .skip_digit
+  je .skip_digit ; we haven't seen a non-zero character yet, so skip
 .no_skip_digit:
-  mov ch, 1
+  mov ch, 1 ; we've now seen a non-zero character if we hadn't already
+
+  ; since we want ecx to hold the screen ptr when calling puthexdigit, we swap
+  ; eax and ecx, swapping them back again at the end so we can use it again on
+  ; the next iteration
   xchg eax, ecx
   call pm32_puthexdigit
   xchg eax, ecx
+
 .skip_digit:
   pop edx
-  cmp cl, 0
+  cmp cl, 0 ; are we done yet?
   jnz .puthex
+
+  ; reset the registers as we saw them and exit
   mov ecx, eax
   pop eax
   ret
 
+; get the value of the instruction pointer in a convoluted way, since x86
+; doesn't let us do `mov eax, eip`
 pm32_get_eip:
   mov eax, [esp]
   ret
@@ -192,18 +225,21 @@ pm32_check_cpuid_supported:
   call pm32_putstr
   jmp hang
 
+; check long mode is supported by first checking if we support cpuid, then
+; checking if the function to check if long mode is supported is supported,
+; then finally checking if long mode is supported :)
 pm32_check_long_mode_supported:
   call pm32_check_cpuid_supported
 
-  mov eax, 0x80000000    ; set the a-register to 0x80000000.
-  cpuid                  ; cpu identification.
-  cmp eax, 0x80000001    ; compare the a-register with 0x80000001.
-  jb .nolongmode         ; it is less, there is no long mode.
+  mov eax, 0x80000000
+  cpuid
+  cmp eax, 0x80000001
+  jb .nolongmode
 
-  mov eax, 0x80000001    ; set the a-register to 0x80000001.
-  cpuid                  ; cpu identification.
-  test edx, 1 << 29      ; test if the lm-bit, which is bit 29, is set in the d-register.
-  jz .nolongmode         ; they aren't, there is no long mode.
+  mov eax, 0x80000001
+  cpuid
+  test edx, 1 << 29 ; test if the lm-bit, which is bit 29, is set
+  jz .nolongmode
   ret
 .nolongmode:
   mov ecx, TEXT_SCREEN_MEMORY
@@ -212,20 +248,27 @@ pm32_check_long_mode_supported:
   jmp hang
 
 
+STACK_SIZE equ 0x4000
 MULTIBOOT_EXPECTED_MAGIC equ 0x36d76289
 
-start: ; ENTRY POINT
+;;;;;;;;;;;;;;;;;
+;; ENTRY POINT ;;
+;;;;;;;;;;;;;;;;;
+start:
 _start:
-  mov esp, stack+STACKSIZE ; Stack setup
+  mov esp, stack+STACK_SIZE ; setup stack
 
-  ; eax contains multiboot magic value
+  ; state of the machine at this point:
+  ; eax contains multiboot magic value (MULTIBOOT_EXPECTED_MAGIC)
   ; ebx contains the physical address of the multiboot information structure
   ; segment registers set to offset 0, limit 0xffffffff
   ; a20 enabled
   ; cr0: bit 0 (protected mode) set, bit 31 (paging) unset
-  ; gdtr - must not load segment registers until is set by os
+  ; gdtr - must not load segment registers until is set by os (see gdt64)
   ; idtr - must leave interrupts disabled until the os sets up an idt
 
+
+  ; check that we got the right magic value, otherwise nobody knows!
   cmp eax, MULTIBOOT_EXPECTED_MAGIC
   je .correct_magic
   mov ecx, TEXT_SCREEN_MEMORY
@@ -234,9 +277,9 @@ _start:
   jmp hang
 .correct_magic:
 
-  push ebx ; Miltiboot info
+  push ebx ; multiboot info
 
-  ; print hello world string to screen
+  ; print hello world string to screen as a sanity check
   mov ecx, TEXT_SCREEN_MEMORY
   mov edx, hello_world_str
   call pm32_putstr
@@ -248,11 +291,6 @@ _start:
   mov ecx, TEXT_SCREEN_MEMORY+TEXT_SCREEN_ROW
   mov edx, long_mode_supported_str
   call pm32_putstr
-
-  ; disable paging (just in case multiboot happened to enable it)
-  mov eax, cr0        ; Set the A-register to control register 0.
-  and eax, 0x7fffffff ; Clear the PG-bit, which is bit 31.
-  mov cr0, eax        ; Set control register 0 to the A-register.
 
   ; print out current eip
   mov ecx, TEXT_SCREEN_MEMORY+2*TEXT_SCREEN_ROW
@@ -270,43 +308,23 @@ _start:
   push edx
   call pm32_puthex
 
+  ; read and parse multiboot information, looking for modules to jump to
+  ; once we have gotten into long mode.
   mov ecx, TEXT_SCREEN_MEMORY+4*TEXT_SCREEN_ROW
-
-  pop edx
+  pop edx ; multiboot information
   push edx
-  lea esi, [edx+8]
+  lea esi, [edx+8] ; start of multiboot information tags
 .parse_multiboot_header:
   mov dl, 't'
   call pm32_putchar
   mov edx, [esi] ; type
   mov eax, edx
-  call pm32_puthex
+  call pm32_puthex ; print type of tag
   mov dl, ':'
   mov ebx, [esi+4] ; size
 
-  cmp eax, 4
-  jne .not_basic_mem_info
-  mov dl, 'm'
-  call pm32_putchar
-  mov edx, [esi+8]
-  call pm32_puthex
-  mov dl, '-'
-  call pm32_putchar
-  mov edx, [esi+12]
-  call pm32_puthex
-  jmp .parse_multiboot_header_next
-
-.not_basic_mem_info:
   cmp eax, 3
   jne .not_module
-  mov dl, 'm'
-  call pm32_putchar
-  mov dl, 'o'
-  call pm32_putchar
-  mov dl, 'd'
-  call pm32_putchar
-  mov dl, '='
-  call pm32_putchar
   lea edx, [esi+4*4] ; module path
   call pm32_putstr
   mov dl, '@'
@@ -327,7 +345,9 @@ _start:
   call pm32_putchar
   add esi, ebx
 .parse_multiboot_header_next2:
-  test esi, 0x7
+  ; increment until we are aligned according to MULTIBOOT_ALIGNMENT,
+  ; then jump back and continue
+  test esi, MULTIBOOT_ALIGNMENT-1
   jz .parse_multiboot_header
   inc esi
   jmp .parse_multiboot_header_next2
@@ -406,6 +426,9 @@ hang:
 
 [bits 64]
 
+; these functions are all just 64-bit versions of those defined above
+; (i.e. for documentation, see s/lm64/pm32/)
+
 lm64_putchar:
   mov dh, 0x07
   mov [rcx], dx
@@ -471,13 +494,17 @@ lm64_puthex:
   ret
 
 realm64: ; from here on we are officially (like, actually) in long mode!
+
+  ; load our module address, print it out and jump straight to it!
   xor rax, rax
-  mov eax, [rsp] ; module start address
+  mov eax, [rsp]
   mov ecx, TEXT_SCREEN_MEMORY + 7*TEXT_SCREEN_ROW
   mov rdx, rax
   call lm64_puthex
   call rax
 
+  ; if we return from that then all we can do is hang
+  cli
   jmp hang
 
 section .data
@@ -525,6 +552,4 @@ gdt64:                ; global descriptor table (64-bit).
 section .bss
 align 4
 
-STACKSIZE equ 0x4000
-
-stack: resb STACKSIZE
+stack: resb STACK_SIZE
