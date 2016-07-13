@@ -1,7 +1,6 @@
 [bits 32]
 
 global start
-global _start
 
 extern kernel_main ; defined in main.cpp
 
@@ -255,7 +254,6 @@ MULTIBOOT_EXPECTED_MAGIC equ 0x36d76289
 ;; ENTRY POINT ;;
 ;;;;;;;;;;;;;;;;;
 start:
-_start:
   mov esp, stack+STACK_SIZE ; setup stack
 
   ; state of the machine at this point:
