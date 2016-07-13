@@ -164,6 +164,7 @@ pm32_check_cpuid_supported:
   mov ecx, TEXT_SCREEN_MEMORY
   mov edx, error_no_cpuid_str
   call pm32_putstr
+  jmp hang
 
 pm32_check_long_mode_supported:
   call pm32_check_cpuid_supported
@@ -182,15 +183,32 @@ pm32_check_long_mode_supported:
   mov ecx, TEXT_SCREEN_MEMORY
   mov edx, error_no_long_mode_str
   call pm32_putstr
+  jmp hang
 
+
+MULTIBOOT_EXPECTED_MAGIC equ 0x36d76289
 
 start: ; ENTRY POINT
 _start:
   mov esp, stack+STACKSIZE ; Stack setup
-  push eax ; Multiboot magic
-  push ebx ; Miltiboot info
 
-  cli      ; turn off interrupts for the time being
+  ; eax contains multiboot magic value
+  ; ebx contains the physical address of the multiboot information structure
+  ; segment registers set to offset 0, limit 0xffffffff
+  ; a20 enabled
+  ; cr0: bit 0 (protected mode) set, bit 31 (paging) unset
+  ; gdtr - must not load segment registers until is set by os
+  ; idtr - must leave interrupts disabled until the os sets up an idt
+
+  cmp eax, MULTIBOOT_EXPECTED_MAGIC
+  je .correct_magic
+  mov ecx, TEXT_SCREEN_MEMORY
+  mov edx, error_wrong_magic_str
+  call pm32_putstr
+  jmp hang
+.correct_magic:
+
+  push ebx ; Miltiboot info
 
   ; print hello world string to screen
   mov ecx, TEXT_SCREEN_MEMORY
@@ -210,6 +228,7 @@ _start:
   and eax, 0x7fffffff ; Clear the PG-bit, which is bit 31.
   mov cr0, eax        ; Set control register 0 to the A-register.
 
+  ; print out current eip
   mov ecx, TEXT_SCREEN_MEMORY+2*TEXT_SCREEN_ROW
   mov edx, instruction_ptr_str
   call pm32_putstr
@@ -217,7 +236,6 @@ _start:
   mov edx, eax
   call pm32_puthex
 
-  ; TODO: print out current eip
   ; TODO: set up paging
 
   ; tell the user we've set up paging
@@ -239,6 +257,7 @@ hello_world_str: db "Hello World!", 0
 instruction_ptr_str: db "Current instruction pointer is ", 0
 long_mode_supported_str: db "Long mode seems to be supported! :)", 0
 paging_set_up_str: db "Finished setting up 64-bit paging!", 0
+error_wrong_magic_str: db "Error: Incorrect multiboot magic number!", 0
 error_no_cpuid_str: db "Error: The CPUID instruction does not appear to be supported!", 0
 error_no_long_mode_str: db "Error: Long mode does not appear to be supported!", 0
 hex_digit_lookup_str: db "0123456789abcdef", 0
