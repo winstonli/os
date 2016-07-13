@@ -1,10 +1,6 @@
 [bits 32]
 
-global start
-
-extern kernel_main ; defined in main.cpp
-
-extern link_text_start ; defined by linker.ld
+extern link_text_start ; all defined by linker script
 extern link_data_end
 extern link_bss_end
 
