@@ -394,7 +394,8 @@ start:
   mov cr4, eax
   
   ; FINALLY we are ready to enter long mode!
-  mov ecx, 0xc0000080          ; 0xc0000080 is the efer msr (extended feature enable register, model specific register)
+  mov ecx, 0xc0000080          ; 0xc0000080 is the efer msr (extended feature
+                               ; enable register, model specific register)
   rdmsr                        ; read from model-specific register
   or eax, 1 << 8               ; set the lm-bit (long-mode) which is bit 8.
   wrmsr                        ; write to model-specific register
@@ -412,7 +413,8 @@ start:
   ; So supposedly at this point we are actually in long mode, however
   ; we have one last thing to set up in the form of a global descriptor table
   lgdt [gdt64.pointer]         ; load the 64-bit global descriptor table.
-  jmp gdt64.code:realm64       ; set the code segment and enter 64-bit long mode by performing a far jump
+  jmp gdt64.code:realm64       ; set the code segment and enter 64-bit long
+                               ; mode by performing a far jump
 
 hang:
   hlt
@@ -515,7 +517,6 @@ hex_digit_lookup_str: db "0123456789abcdef", 0
 
 ; global descriptor table
 
-[bits 64]
 gdt64:                ; global descriptor table (64-bit).
 .null: equ $ - gdt64  ; the null descriptor.
   dw 0                ; limit (low).
