@@ -270,6 +270,71 @@ _start:
   push edx
   call pm32_puthex
 
+  mov ecx, TEXT_SCREEN_MEMORY+4*TEXT_SCREEN_ROW
+
+  pop edx
+  push edx
+  lea esi, [edx+8]
+.parse_multiboot_header:
+  mov dl, 't'
+  call pm32_putchar
+  mov edx, [esi] ; type
+  mov eax, edx
+  call pm32_puthex
+  mov dl, ':'
+  mov ebx, [esi+4] ; size
+
+  cmp eax, 4
+  jne .not_basic_mem_info
+  mov dl, 'm'
+  call pm32_putchar
+  mov edx, [esi+8]
+  call pm32_puthex
+  mov dl, '-'
+  call pm32_putchar
+  mov edx, [esi+12]
+  call pm32_puthex
+  jmp .parse_multiboot_header_next
+
+.not_basic_mem_info:
+  cmp eax, 3
+  jne .not_module
+  mov dl, 'm'
+  call pm32_putchar
+  mov dl, 'o'
+  call pm32_putchar
+  mov dl, 'd'
+  call pm32_putchar
+  mov dl, '='
+  call pm32_putchar
+  lea edx, [esi+4*4] ; module path
+  call pm32_putstr
+  mov dl, '@'
+  call pm32_putchar
+  mov edx, [esi+2*4] ; module start
+  mov edi, edx       ; store module start in edi so we can jump to it
+                     ; once we enter 64-bit mode!
+  call pm32_puthex
+  mov dl, ' '
+  call pm32_putchar
+  jmp .parse_multiboot_header_next
+
+.not_module:
+  cmp eax, 0
+  je .parse_multiboot_header_end
+.parse_multiboot_header_next:
+  mov dl, ' '
+  call pm32_putchar
+  add esi, ebx
+.parse_multiboot_header_next2:
+  test esi, 0x7
+  jz .parse_multiboot_header
+  inc esi
+  jmp .parse_multiboot_header_next2
+.parse_multiboot_header_end:
+
+  push edi ; push module start address
+
   ; set up paging
   ; we start by identity mapping the first two megabytes (up to 0x200000)
   ; (we can change it to higher-half later)
@@ -325,92 +390,95 @@ _start:
   or eax, 1 << 31
   mov cr0, eax
 
-  ; So supposedly at this point we are actually in long mode, however
-  ; we have one last thing to set up in the form of a global descriptor table
-  lgdt [gdt64.pointer]         ; load the 64-bit global descriptor table.
-  ; jmp gdt64.code:realm64       ; set the code segment and enter 64-bit long mode by performing a far jump
-
-realm64: ; from here on we are officially (like actually in long mode!)
   ; tell the user we've set up paging
   mov ecx, TEXT_SCREEN_MEMORY+6*TEXT_SCREEN_ROW
   mov edx, paging_set_up_str
   call pm32_putstr
 
-  ; TODO: far jump to 64-bit land
-  ; TODO: print out the current rip to make sure we're in 64-bit land
-
-  mov ecx, TEXT_SCREEN_MEMORY+4*TEXT_SCREEN_ROW
-
-  pop edx
-  push edx
-  lea esi, [edx+8]
-.parse_multiboot_header:
-  mov dl, 't'
-  call pm32_putchar
-  mov edx, [esi] ; type
-  mov eax, edx
-  call pm32_puthex
-  mov dl, ':'
-  mov ebx, [esi+4] ; size
-
-  cmp eax, 4
-  jne .not_basic_mem_info
-  mov dl, 'm'
-  call pm32_putchar
-  mov edx, [esi+8]
-  call pm32_puthex
-  mov dl, '-'
-  call pm32_putchar
-  mov edx, [esi+12]
-  call pm32_puthex
-  jmp .parse_multiboot_header_next
-
-.not_basic_mem_info:
-  cmp eax, 3
-  jne .not_module
-  mov dl, 'm'
-  call pm32_putchar
-  mov dl, 'o'
-  call pm32_putchar
-  mov dl, 'd'
-  call pm32_putchar
-  mov dl, '='
-  call pm32_putchar
-  lea edx, [esi+4*4] ; module path
-  call pm32_putstr
-  mov dl, '@'
-  call pm32_putchar
-  mov edx, [esi+2*4] ; module start
-  call pm32_puthex
-  mov dl, ' '
-  call pm32_putchar
-  mov edx, [esi+2*4] ; module start
-  call edx
-  jmp .parse_multiboot_header_next
-
-.not_module:
-  cmp eax, 0
-  je .parse_multiboot_header_end
-.parse_multiboot_header_next:
-  mov dl, ' '
-  call pm32_putchar
-  add esi, ebx
-.parse_multiboot_header_next2:
-  test esi, 0x7
-  jz .parse_multiboot_header
-  inc esi
-  jmp .parse_multiboot_header_next2
-
-
-
-.parse_multiboot_header_end:
-
+  ; So supposedly at this point we are actually in long mode, however
+  ; we have one last thing to set up in the form of a global descriptor table
+  lgdt [gdt64.pointer]         ; load the 64-bit global descriptor table.
+  jmp gdt64.code:realm64       ; set the code segment and enter 64-bit long mode by performing a far jump
 
 hang:
   hlt
   jmp hang
 
+[bits 64]
 
+lm64_putchar:
+  mov dh, 0x07
+  mov [rcx], dx
+  add rcx, 2
+  ret
+
+lm64_putstr:
+  cmp byte [rdx], 0
+  je .done
+  push rdx
+  mov dl, [rdx]
+  call lm64_putchar
+  pop rdx
+  add rdx, 1
+  jmp lm64_putstr
+.done:
+  ret
+
+
+lm64_puthexdigit:
+  mov dl, [hex_digit_lookup_str + rdx]
+  jmp lm64_putchar
+
+lm64_puthex:
+  push rdx
+  mov dl, '0'
+  call lm64_putchar
+  mov dl, 'x'
+  call lm64_putchar
+  pop rdx
+  cmp rdx, 0
+  jne .not_zero
+  mov dl, '0'
+  call lm64_putchar
+  ret
+.not_zero:
+  push rax
+  mov rax, rcx
+  mov cl, 64
+  mov ch, 0 ; have we written a non-zero char yet?
+.puthex:
+  sub cl, 4
+  push rdx
+  shr rdx, cl
+  and rdx, 0xf
+  cmp rdx, 0x0
+  je .skip_digit_maybe
+  jmp .no_skip_digit
+.skip_digit_maybe:
+  cmp ch, 0
+  je .skip_digit
+.no_skip_digit:
+  mov ch, 1
+  xchg rax, rcx
+  call lm64_puthexdigit
+  xchg rax, rcx
+.skip_digit:
+  pop rdx
+  cmp cl, 0
+  jnz .puthex
+  mov rcx, rax
+  pop rax
+  ret
+
+realm64: ; from here on we are officially (like, actually) in long mode!
+  xor rax, rax
+  mov eax, [rsp] ; module start address
+  mov ecx, TEXT_SCREEN_MEMORY + 7*TEXT_SCREEN_ROW
+  mov rdx, rax
+  call lm64_puthex
+  call rax
+
+  jmp hang
 
 section .data
 hello_world_str: db "Hello World!", 0
