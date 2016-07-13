@@ -1,3 +1,4 @@
+[bits 32]
 global start
 global _start
 extern kernel_main ; Defined in main.cpp
@@ -269,12 +270,81 @@ _start:
   push edx
   call pm32_puthex
 
+  ; set up paging
+  ; we start by identity mapping the first two megabytes (up to 0x200000)
+  ; (we can change it to higher-half later)
+
+  ; our page tables will be located as follows:
+  ; P4 / PML4T - 0x1000
+  ; P3 / PDPT - 0x2000
+  ; P2 / PDT - 0x3000
+  ; P1 / PT - 0x4000
+  ; hopefully these won't clash with grub, which tends to load things
+  ; much higher in the memory space
+
+  mov edi, 0x1000
+  mov cr3, edi ; set the location of P4 to 0x1000
+
+  xor eax, eax
+  mov ecx, 4096
+  rep stosd ; zero the first 4096 dwords of memory (i.e. 4096*4 = 0x4000 bytes)
+
+  mov edi, cr3
+  ; the trailing 3s here indicate that the age is present and r/w
+  mov dword [edi], 0x2003      ; map 0th entry of P4 to 0x2000
+  add edi, 0x1000
+  mov dword [edi], 0x3003      ; map 0th entry of P3 to 0x3000
+  add edi, 0x1000
+  mov dword [edi], 0x4003      ; map 0th entry of P2 to 0x4000
+  add edi, 0x1000
+
+  ; finally, identity map all 512 entries of P1 at 0x4000!
+  mov ebx, 0x3 ; start at address 0, with flags as above
+  mov ecx, 512
+
+.set_entry:
+  mov dword [edi], ebx ; actually set the entry
+  add ebx, 0x1000      ; iterate to next address (4kb pages = 0x1000)
+  add edi, 8           ; iterate to next entry in P1 (size of ptr)
+  loop .set_entry      ; decrement and check ecx
+
+  ; now we set up PAE (physical address extension) by setting bit 5
+  ; of control register 4
+  mov eax, cr4
+  or eax, 1 << 5
+  mov cr4, eax
+  
+  ; FINALLY we are ready to enter long mode!
+  mov ecx, 0xc0000080          ; 0xc0000080 is the efer msr (extended feature enable register, model specific register)
+  rdmsr                        ; read from model-specific register
+  or eax, 1 << 8               ; set the lm-bit (long-mode) which is bit 8.
+  wrmsr                        ; write to model-specific register
+
+  ; enable paging by setting bit 31 of control register 0
+  mov eax, cr0
+  or eax, 1 << 31
+  mov cr0, eax
+
+  ; So supposedly at this point we are actually in long mode, however
+  ; we have one last thing to set up in the form of a global descriptor table
+  lgdt [gdt64.pointer]         ; load the 64-bit global descriptor table.
+  ; jmp gdt64.code:realm64       ; set the code segment and enter 64-bit long mode by performing a far jump
+
+realm64: ; from here on we are officially (like actually in long mode!)
+  ; tell the user we've set up paging
+  mov ecx, TEXT_SCREEN_MEMORY+6*TEXT_SCREEN_ROW
+  mov edx, paging_set_up_str
+  call pm32_putstr
+
+  ; TODO: far jump to 64-bit land
+  ; TODO: print out the current rip to make sure we're in 64-bit land
+
   mov ecx, TEXT_SCREEN_MEMORY+4*TEXT_SCREEN_ROW
 
   pop edx
   push edx
   lea esi, [edx+8]
-.parse_multiboot_header
+.parse_multiboot_header:
   mov dl, 't'
   call pm32_putchar
   mov edx, [esi] ; type
@@ -335,15 +405,6 @@ _start:
 
 .parse_multiboot_header_end:
 
-  ; TODO: set up paging
-
-  ; tell the user we've set up paging
-  mov ecx, TEXT_SCREEN_MEMORY+6*TEXT_SCREEN_ROW
-  mov edx, paging_set_up_str
-  call pm32_putstr
-
-  ; TODO: far jump to 64-bit land
-  ; TODO: print out the current rip to make sure we're in 64-bit land
 
 hang:
   hlt
@@ -362,6 +423,35 @@ error_no_cpuid_str: db "Error: The CPUID instruction does not appear to be suppo
 error_no_long_mode_str: db "Error: Long mode does not appear to be supported!", 0
 hex_digit_lookup_str: db "0123456789abcdef", 0
 
+
+; global descriptor table
+
+[bits 64]
+gdt64:                ; global descriptor table (64-bit).
+.null: equ $ - gdt64  ; the null descriptor.
+  dw 0                ; limit (low).
+  dw 0                ; base (low).
+  db 0                ; base (middle)
+  db 0                ; access.
+  db 0                ; granularity.
+  db 0                ; base (high).
+.code: equ $ - gdt64  ; the code descriptor.
+  dw 0                ; limit (low).
+  dw 0                ; base (low).
+  db 0                ; base (middle)
+  db 10011010b        ; access (exec/read).
+  db 00100000b        ; granularity.
+  db 0                ; base (high).
+.data: equ $ - gdt64  ; the data descriptor.
+  dw 0                ; limit (low).
+  dw 0                ; base (low).
+  db 0                ; base (middle)
+  db 10010010b        ; access (read/write).
+  db 00000000b        ; granularity.
+  db 0                ; base (high).
+.pointer:             ; the gdt-pointer.
+  dw $ - gdt64 - 1    ; limit.
+  dq gdt64            ; base.
 
 
 section .bss

@@ -5,7 +5,7 @@ OBJFILES := $(ASMFILES:.s=.o)
 
 CXXFLAGS += --target=i686-pc-none-elf -march=i686
 
-LDFLAGS := -melf_i386 -nostdlib
+LDFLAGS := -nostdlib
 
 all: kernel.iso
 .PHONY: all
@@ -29,7 +29,7 @@ kernel: kernel.ld $(OBJFILES)
 	ld $(LDFLAGS) -T kernel.ld $(OBJFILES) -o $@
 
 %.o: %.s
-	nasm -f elf $^ -o $@
+	nasm -f elf64 $^ -o $@
 
 %.mod: %.o
 	ld $(LDFLAGS) -T module.ld -r -o $@ $^
