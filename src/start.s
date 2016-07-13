@@ -43,13 +43,6 @@ align 8, db 0
   dw TAG_TYPE_INFORMATION_REQUEST
   dw TAG_REQUIRED
   dd (.info_req_tag_end - .info_req_tag)
-  dd 1
-  dd 2
-  dd 3
-  dd 4 ; TODO: magic number (basic meminfo)
-  dd 5
-  dd 6
-  dd 7
 .info_req_tag_end:
 align 8, db 0
 .addr_tag:
@@ -92,8 +85,8 @@ multiboot_header_end:
 
 section .text
 
-TEXT_SCREEN_MEMORY equ 0xb8000
 TEXT_SCREEN_ROW equ 80*2 ; 80 characters wide, 2 bytes per character
+TEXT_SCREEN_MEMORY equ 0xb8000 + TEXT_SCREEN_ROW*10
 
 pm32_putchar:
   mov dh, 0x07
@@ -124,20 +117,38 @@ pm32_puthex:
   mov dl, 'x'
   call pm32_putchar
   pop edx
+  cmp edx, 0
+  jne .not_zero
+  mov dl, '0'
+  call pm32_putchar
+  ret
+.not_zero:
+  push eax
   mov eax, ecx
   mov cl, 32
+  mov ch, 0 ; have we written a non-zero char yet?
 .puthex:
   sub cl, 4
   push edx
   shr edx, cl
   and edx, 0xf
+  cmp edx, 0x0
+  je .skip_digit_maybe
+  jmp .no_skip_digit
+.skip_digit_maybe:
+  cmp ch, 0
+  je .skip_digit
+.no_skip_digit:
+  mov ch, 1
   xchg eax, ecx
   call pm32_puthexdigit
   xchg eax, ecx
+.skip_digit:
   pop edx
   cmp cl, 0
   jnz .puthex
   mov ecx, eax
+  pop eax
   ret
 
 pm32_get_eip:
@@ -264,8 +275,14 @@ _start:
   push edx
   lea esi, [edx+8]
 .parse_multiboot_header
-  mov eax, [esi] ; type
+  mov dl, 't'
+  call pm32_putchar
+  mov edx, [esi] ; type
+  mov eax, edx
+  call pm32_puthex
+  mov dl, ':'
   mov ebx, [esi+4] ; size
+
   cmp eax, 4
   jne .not_basic_mem_info
   mov dl, 'm'
@@ -277,10 +294,30 @@ _start:
   mov edx, [esi+12]
   call pm32_puthex
   jmp .parse_multiboot_header_next
+
 .not_basic_mem_info:
+  cmp eax, 3
+  jne .not_module
+  mov dl, 'm'
+  call pm32_putchar
+  mov dl, 'o'
+  call pm32_putchar
+  mov dl, 'd'
+  call pm32_putchar
+  mov dl, '='
+  call pm32_putchar
+  lea edx, [esi+4*4]
+  call pm32_putstr
+  mov dl, ' '
+  call pm32_putchar
+  jmp .parse_multiboot_header_next
+
+.not_module:
   cmp eax, 0
   je .parse_multiboot_header_end
 .parse_multiboot_header_next:
+  mov dl, ' '
+  call pm32_putchar
   add esi, ebx
 .parse_multiboot_header_next2:
   test esi, 0x7
@@ -295,7 +332,7 @@ _start:
   ; TODO: set up paging
 
   ; tell the user we've set up paging
-  mov ecx, TEXT_SCREEN_MEMORY+5*TEXT_SCREEN_ROW
+  mov ecx, TEXT_SCREEN_MEMORY+6*TEXT_SCREEN_ROW
   mov edx, paging_set_up_str
   call pm32_putstr
 

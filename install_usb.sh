@@ -7,6 +7,8 @@ if [ "$#" -ne 1 ]; then
   exit 1
 fi
 
+make
+
 drive_label="OSDev-$RANDOM"
 mount_dir="/media/os-$RANDOM"
 
@@ -30,7 +32,7 @@ sudo mount "$1"1 "$mount_dir"
 sudo grub-install --root-directory="$mount_dir" --no-floppy --recheck --force "$1"
 
 # copy in kernel and grub config
-sudo cp kernel "$mount_dir/boot/"
+sudo cp kernel *.mod "$mount_dir/boot/"
 sudo cp grub.cfg "$mount_dir/boot/grub/"
 
 # ensure data is written, then unmount and eject device

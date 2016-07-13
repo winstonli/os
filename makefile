@@ -22,7 +22,7 @@ kernel.iso: kernel grub.cfg $(MODULES)
 	mkdir -p iso/boot/grub
 	cp kernel iso/boot/kernel
 	cp grub.cfg iso/boot/grub/grub.cfg
-	cp $(MODULES) iso/boot/grub/
+	cp $(MODULES) iso/boot/
 	grub-mkrescue -o $@ iso
 
 kernel: linker.ld $(OBJFILES)
