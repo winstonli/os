@@ -1,3 +1,3 @@
-extern "C" int get_content (void) {
+extern "C" int get_content(void) {
   return 0x07690748;
 }

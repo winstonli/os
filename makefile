@@ -7,11 +7,15 @@ COMMON_FLAGS += --target=x86_64-pc-none-elf -ffreestanding -fno-builtin -nostdli
 CFLAGS += $(COMMON_FLAGS)
 CXXFLAGS += $(COMMON_FLAGS)
 
+HFILES = $(shell find . -type f -name '*.h')
 CFILES = $(shell find . -type f -name '*.c')
 CXXFILES = $(shell find . -type f -name '*.cpp')
 DEPFILES = $(CFILES:.c=.d) $(CXXFILES:.cpp=.d)
 
 LDFLAGS := -nostdlib
+
+# always run clang-format regardless
+$(shell clang-format -i $(CFILES) $(CXXFILES) $(HFILES))
 
 all: kernel.iso
 .PHONY: all
@@ -49,8 +53,8 @@ kernel.mod: module.ld src/modules/kernel/entry.o src/modules/kernel/main.o src/c
 	clang++ $(CXXFLAGS) -c -o $@ $<
 
 clean:
-	find . -type f -name '*.o' -o -name '*.mod' -o -name '*.d' | xargs rm -f
-	rm -f kernel.iso
-	rm -f kernel
-	rm -rf iso/
+	find . -type f \( -name '*.o' -o -name '*.mod' -o -name '*.d' \) | xargs rm -fv
+	rm -fv kernel.iso
+	rm -fv kernel
+	rm -rfv iso/
 .PHONY: clean

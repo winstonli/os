@@ -1,38 +1,38 @@
 #include "common.h"
 
-template<>
+template <>
 void out(uint16_t port, uint8_t data) {
-  asm volatile ("outb %1, %0" : : "dN" (port), "a" (data));
+  asm volatile("outb %1, %0" : : "dN"(port), "a"(data));
 }
 
-template<>
+template <>
 void out(uint16_t port, uint16_t data) {
-  asm volatile ("outw %1, %0" : : "dN" (port), "a" (data));
+  asm volatile("outw %1, %0" : : "dN"(port), "a"(data));
 }
 
-template<>
+template <>
 void out(uint16_t port, uint32_t data) {
-  asm volatile ("outl %1, %0" : : "dN" (port), "a" (data));
+  asm volatile("outl %1, %0" : : "dN"(port), "a"(data));
 }
 
-template<>
+template <>
 uint8_t in(uint16_t port) {
   uint8_t ret;
-  asm volatile("inb %1, %0" : "=a" (ret) : "dN" (port));
+  asm volatile("inb %1, %0" : "=a"(ret) : "dN"(port));
   return ret;
 }
 
-template<>
+template <>
 uint16_t in(uint16_t port) {
   uint16_t ret;
-  asm volatile("inw %1, %0" : "=a" (ret) : "dN" (port));
+  asm volatile("inw %1, %0" : "=a"(ret) : "dN"(port));
   return ret;
 }
 
-template<>
+template <>
 uint32_t in(uint16_t port) {
   uint32_t ret;
-  asm volatile("inl %1, %0" : "=a" (ret) : "dN" (port));
+  asm volatile("inl %1, %0" : "=a"(ret) : "dN"(port));
   return ret;
 }
 
