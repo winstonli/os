@@ -1,4 +1,4 @@
-MODULES := hello.mod
+MODULES := kernel.mod
 
 ASMFILES := src/start.s
 OBJFILES := $(ASMFILES:.s=.o)
@@ -20,21 +20,21 @@ bochs: kernel.iso bochsrc.txt
 	bochs
 .PHONY: qemu
 
-kernel.iso: kernel grub.cfg $(MODULES)
+kernel.iso: loader grub.cfg $(MODULES)
 	mkdir -p iso/boot/grub
-	cp kernel iso/boot/kernel
+	cp loader iso/boot/loader
 	cp grub.cfg iso/boot/grub/grub.cfg
 	cp $(MODULES) iso/boot/
 	grub-mkrescue -o $@ iso
 
-kernel: kernel.ld $(OBJFILES)
-	ld $(LDFLAGS) -T kernel.ld $(OBJFILES) -o $@
+loader: loader.ld src/start.o
+	ld -T $^ $(LDFLAGS) -o $@
 
 %.o: %.s
 	nasm -f elf64 $^ -o $@
 
-hello.mod: hello.o hello2.o
-	ld $(LDFLAGS) --gc-sections -shared -fpie -T module.ld -o $@ $^
+kernel.mod: module.ld src/modules/kernel/hello.o src/modules/kernel/hello2.o
+	ld --gc-sections -shared -fpie -T module.ld $^ $(LDFLAGS) -o $@
 
 %.o: %.c
 	clang $(CFLAGS) -c -o $@ $<

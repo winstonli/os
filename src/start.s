@@ -308,6 +308,8 @@ start:
   pop edx ; multiboot information
   push edx
   lea esi, [edx+8] ; start of multiboot information tags
+  xor edi, edi ; zero out module start address so we can check we actually
+               ; found one later!
 .parse_multiboot_header:
   mov dl, 't'
   call pm32_putchar
@@ -347,6 +349,14 @@ start:
   jmp .parse_multiboot_header_next2
 .parse_multiboot_header_end:
 
+  ; check that we found a good start address
+  cmp edi, 0
+  jne .valid_module_start_addr
+  mov ecx, TEXT_SCREEN_MEMORY+6*TEXT_SCREEN_ROW
+  mov edx, error_no_kernel_module_str
+  call pm32_putstr
+  jmp hang
+.valid_module_start_addr:
   push edi ; push module start address
 
   ; set up paging
@@ -512,6 +522,7 @@ paging_set_up_str: db "Finished setting up 64-bit paging!", 0
 error_wrong_magic_str: db "Error: Incorrect multiboot magic number!", 0
 error_no_cpuid_str: db "Error: The CPUID instruction does not appear to be supported!", 0
 error_no_long_mode_str: db "Error: Long mode does not appear to be supported!", 0
+error_no_kernel_module_str: db "Error: No valid kernel module appears to have been loaded!", 0
 hex_digit_lookup_str: db "0123456789abcdef", 0
 
 
