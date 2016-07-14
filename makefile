@@ -39,7 +39,7 @@ loader: loader.ld src/start.o
 %.o: %.s
 	nasm -f elf64 $^ -o $@
 
-kernel.mod: module.ld src/modules/kernel/entry.o src/modules/kernel/main.o src/common.o
+kernel.mod: module.ld src/modules/kernel/entry.o src/modules/kernel/main.o src/common/common.o
 	ld --gc-sections -shared -fpie -T module.ld $^ $(LDFLAGS) -o $@
 
 %.o: %.c
