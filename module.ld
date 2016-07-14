@@ -3,9 +3,6 @@ SECTIONS
 {
   .text : {
     *(.text)
-  }
-
-  .data : {
     *(.rodata)
     *(.data)
   }
