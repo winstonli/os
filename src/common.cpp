@@ -35,3 +35,9 @@ uint32_t in(uint16_t port) {
   asm volatile("inl %1, %0" : "=a" (ret) : "dN" (port));
   return ret;
 }
+
+void io_wait() {
+  // Port 0x80 is used for 'checkpoints' during POST.
+  // The Linux kernel seems to think it is free for use.
+  out<uint8_t>(0x80, 0);
+}
