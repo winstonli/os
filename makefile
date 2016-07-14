@@ -5,7 +5,7 @@ OBJFILES := $(ASMFILES:.s=.o)
 
 COMMON_FLAGS += --target=x86_64-pc-none-elf -ffreestanding -fno-builtin -nostdlib -nostdinc -fno-exceptions -fno-rtti -MMD
 CFLAGS += $(COMMON_FLAGS)
-CXXFLAGS += $(COMMON_FLAGS) -nostdinc++
+CXXFLAGS += $(COMMON_FLAGS)
 
 CFILES = $(shell find . -type f -name '*.c')
 CXXFILES = $(shell find . -type f -name '*.cpp')
@@ -39,7 +39,7 @@ loader: loader.ld src/start.o
 %.o: %.s
 	nasm -f elf64 $^ -o $@
 
-kernel.mod: module.ld src/modules/kernel/entry.o src/modules/kernel/main.o
+kernel.mod: module.ld src/modules/kernel/entry.o src/modules/kernel/main.o src/common.o
 	ld --gc-sections -shared -fpie -T module.ld $^ $(LDFLAGS) -o $@
 
 %.o: %.c
