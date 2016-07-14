@@ -3,9 +3,9 @@ MODULES := kernel.mod
 ASMFILES := src/start.s
 OBJFILES := $(ASMFILES:.s=.o)
 
-COMMON_FLAGS += --target=x86_64-pc-none-elf -ffreestanding -fno-builtin -nostdlib -nostdinc -fno-exceptions -fno-rtti -MMD
-CFLAGS += $(COMMON_FLAGS)
-CXXFLAGS += $(COMMON_FLAGS)
+COMMON_FLAGS += -fpic --target=x86_64-pc-none-elf -ffreestanding -fno-builtin -nostdlib -nostdinc -fno-exceptions -fno-rtti -MMD
+CFLAGS += $(COMMON_FLAGS) -std=c11
+CXXFLAGS += $(COMMON_FLAGS) -std=c++11 -Isrc/
 
 HFILES = $(shell find . -type f -name '*.h')
 CFILES = $(shell find . -type f -name '*.c')
@@ -43,7 +43,7 @@ loader: loader.ld src/start.o
 %.o: %.s
 	nasm -f elf64 $^ -o $@
 
-kernel.mod: module.ld src/modules/kernel/entry.o src/modules/kernel/main.o src/common/common.o
+kernel.mod: module.ld src/modules/kernel/entry.o src/modules/kernel/main.o src/modules/kernel/terminal.o src/common/common.o
 	ld --gc-sections -shared -fpie -T module.ld $^ $(LDFLAGS) -o $@
 
 %.o: %.c
