@@ -1,4 +1,8 @@
 [bits 64]
+extern get_content
+
 section .text
-mov dword [0xb8000+160*24], 0x07690748
-ret
+start:
+  call get_content
+  mov [0xb8000+160*24], eax
+  ret

@@ -3,7 +3,9 @@ MODULES := hello.mod
 ASMFILES := src/start.s
 OBJFILES := $(ASMFILES:.s=.o)
 
-CXXFLAGS += --target=i686-pc-none-elf -march=i686
+COMMON_FLAGS += --target=x86_64-pc-none-elf -ffreestanding -fno-builtin -nostdlib -nostdinc -fno-exceptions -fno-rtti
+CFLAGS += $(COMMON_FLAGS)
+CXXFLAGS += $(COMMON_FLAGS) -nostdinc++
 
 LDFLAGS := -nostdlib
 
@@ -31,11 +33,14 @@ kernel: kernel.ld $(OBJFILES)
 %.o: %.s
 	nasm -f elf64 $^ -o $@
 
-%.mod: %.o
-	ld $(LDFLAGS) -T module.ld -r -o $@ $^
+hello.mod: hello.o hello2.o
+	ld $(LDFLAGS) --gc-sections -shared -fpie -T module.ld -o $@ $^
 
 %.o: %.c
-	clang $(CXXFLAGS) -c -o $@ $<
+	clang $(CFLAGS) -c -o $@ $<
+
+%.o: %.cpp
+	clang++ $(CXXFLAGS) -c -o $@ $<
 
 clean:
 	find . -type f -name '*.o' -o -name '*.mod' | xargs rm -f
