@@ -1,5 +1,6 @@
 #include "terminal.h"
 #include "common/common.h"
+#include "common/string.h"
 
 #define TEXT_VIDEO_MEMORY ((volatile uint16_t *)(0xb8000))
 #define TEXT_NUM_ROWS 25
@@ -39,12 +40,27 @@ void terminal_pop_cursor_state(void) {
   }
 }
 
+// shift the content of the terminal screen up by one line,
+// does _NOT_ change the position of the cursor
+void terminal_scrollback() {
+  memcpy(TEXT_VIDEO_MEMORY, TEXT_VIDEO_MEMORY + TEXT_NUM_COLS,
+         TEXT_NUM_COLS * (TEXT_NUM_ROWS - 1));
+}
+
 void terminal_putchar(char ch) {
   auto &elem = cursor_state_stack[cursor_state_stack_idx];
-  auto where = TEXT_VIDEO_MEMORY + elem.y * TEXT_NUM_COLS + elem.x;
+  while (elem.y >= TEXT_NUM_ROWS) {
+    terminal_scrollback();
+    --elem.y;
+  }
+  auto where = TEXT_VIDEO_MEMORY + (elem.y * TEXT_NUM_COLS) + elem.x;
   *where = ch | (elem.colour << 8);
   // move elem state ready for next character
   ++elem.x;
+  if (elem.x >= TEXT_NUM_COLS) {
+    ++elem.y;
+    elem.x = 0;
+  }
 }
 
 void terminal_write(const char *str) {

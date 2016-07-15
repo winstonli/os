@@ -41,10 +41,3 @@ void io_wait() {
   // The Linux kernel seems to think it is free for use.
   out<uint8_t>(0x80, 0);
 }
-
-template <>
-void memzero(char *elems, int num_elems) {
-  for (int i = 0; i < num_elems; ++i) {
-    elems[i] = 0;
-  }
-}
