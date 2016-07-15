@@ -1,23 +1,33 @@
+; This file holds data that identifies us as multiboot-compilant
+; and enables grub to load this file and switch to us after nicely putting us
+; in 32-bit protected mode. We load the actual 64-bit kernel proper as a
+; multiboot module, allowing us to strictly work with 64-bit code in the
+; kernel itself so only this file has to deal with the additional complexity
+; of handling both modes.
 [bits 32]
-
-extern link_text_start ; all defined by linker script
+extern link_text_start ; all defined by linker script of `filename.ld`,
 extern link_data_end
 extern link_bss_end
 
-; multiboot header definitions
+; references to multiboot spec refer to version 1.6:
+; http://download-mirror.savannah.gnu.org/releases/grub/phcoder/multiboot.pdf
+
+; multiboot header definitions (see section 3.1.1/3.1.2 of multiboot spec)
 MAGIC equ 0xe85250d6
 ARCHITECTURE equ 0 ; 0 for 32-bit protected, 4 for 32-bit MIPS
 HEADER_LENGTH equ (multiboot_header_end-multiboot_header)
 CHECKSUM equ -(MAGIC + ARCHITECTURE + HEADER_LENGTH)
 
-TAG_TYPE_NULL equ 0 ; null tag type to signify end of tag list
+; tags allow us to request and supply certain pieces of information about our
+; system from and to grub (see sections 3.1.3 through 3.1.9)
+TAG_TYPE_NULL equ 0  ; null tag type to signify end of tag list
 TAG_TYPE_INFORMATION_REQUEST equ 1 ; request information (e.g. memory map
                                    ; or loaded modules), however grub does
                                    ; this without asking
-TAG_TYPE_ADDRESS equ 2 ; specify where to load this data into physical memory
-TAG_TYPE_ENTRY equ 3 ; specify entry point
-TAG_TYPE_FLAGS equ 4
-TAG_TYPE_FRAMEBUFFER equ 5
+TAG_TYPE_ADDRESS equ 2  ; specify where to load this file into physical memory
+TAG_TYPE_ENTRY equ 3 ; specify entry point for our program (i.e. `start` label)
+TAG_TYPE_FLAGS equ 4 
+TAG_TYPE_FRAMEBUFFER equ 5  ; allows us to set the graphics mode
 TAG_TYPE_MODULE_ALIGNMENT equ 6 ; requst that modules are loaded aligned to
                                 ; a page boundary, however grub does this
                                 ; without asking
@@ -26,11 +36,17 @@ TAG_TYPE_MODULE_ALIGNMENT equ 6 ; requst that modules are loaded aligned to
 TAG_REQUIRED equ 0
 TAG_OPTIONAL equ 1
 
+; some useful definitions that we'll use in the tag definitions
 HEADER_ADDR equ multiboot_header ; the physical address of the multiboot header
 LOAD_START_ADDR equ link_text_start ; the address of the start of .text/.data
 LOAD_END_ADDR equ link_data_end ; the address of the end of .text/.data
 BSS_END_ADDR equ link_bss_end ; the address of the end of .bss
 
+; alignment of various structures in multiboot structures
+; section 3.1.3 _incorrectly_ specifies that structures are padded to u_virt
+; size (the size of the virtual address space, i.e. 32-bits/4-bytes in 32-bit
+; protected mode). It is actually 8 bytes regardless of the underlying arch.
+; (see http://forum.osdev.org/viewtopic.php?f=1&t=27602 if interested)
 MULTIBOOT_ALIGNMENT equ 8
 
 
@@ -41,14 +57,15 @@ multiboot_header:
   dd MAGIC ; magic number so grub2 will find us
   dd ARCHITECTURE ; x86, 32-bit protected mode
   dd HEADER_LENGTH
-  dd CHECKSUM ; must be 0 when above three fields are added
+  dd CHECKSUM ; must be 0 when above three fields are added to this
+              ; i.e. MAGIC + ARCHITECTURE + HEADER_LENGTH + CHECKSUM = 0
 
 ; we should technically have an information request here for modules, but
 ; since grub provides it regardless we omit it for now. (similarly we may
 ; also want to have aligned modules, unsure)
 .tags:
 align MULTIBOOT_ALIGNMENT, db 0
-.addr_tag:
+.addr_tag:  ; specify important addresses so grub loads us correctly (3.1.5)
   dw TAG_TYPE_ADDRESS
   dw TAG_OPTIONAL
   dd (.addr_tag_end - .addr_tag)
@@ -58,7 +75,7 @@ align MULTIBOOT_ALIGNMENT, db 0
   dd BSS_END_ADDR
 .addr_tag_end:
 align MULTIBOOT_ALIGNMENT, db 0
-.entry_tag:
+.entry_tag:  ; specify entry point of our program (`start` symbol, 3.1.6)
   dw TAG_TYPE_ENTRY
   dw TAG_OPTIONAL
   dd (.entry_tag_end - .entry_tag)
@@ -67,7 +84,7 @@ align MULTIBOOT_ALIGNMENT, db 0
 align MULTIBOOT_ALIGNMENT, db 0
 ; Makes us a nice screen to work with, but 0x8b000 is easier for debugging
 ; purposes for the time being, so we'll uncomment this later if we want it.
-; .framebuffer_tag:
+; .framebuffer_tag:  ; 3.1.8
 ;   dw TAG_TYPE_FRAMEBUFFER
 ;   dw TAG_OPTIONAL
 ;   dd (.framebuffer_tag_end - .framebuffer_tag)
@@ -78,7 +95,7 @@ align MULTIBOOT_ALIGNMENT, db 0
 ; align MULTIBOOT_ALIGNMENT, db 0
 .null_tag:
   dw TAG_TYPE_NULL ; this lets the bootloader know that we have run out of tags
-  dw 0
+  dw 0             ; (final paragraph of 3.1.3)
   dd (.null_tag_end - .null_tag)
 .null_tag_end:
 .tags_end:
@@ -92,6 +109,13 @@ TEXT_SCREEN_MEMORY equ 0xb8000 ; address of the text screen video memory
                                ; (80x25 w/ one byte each for colour and ascii)
 TEXT_SCREEN_ROW equ 80*2 ; 80 characters wide, 2 bytes per character
 TEXT_WHITE_ON_BLACK equ 0x07
+
+; note on calling conventions:
+; for this file we utilise our own arbitrary calling convention of passing
+; arguments 1 and 2 in ecx/rcx and edx/rdx respectively and returning any
+; resulting values in eax/rax (similar to 32-bit ms/gnu fastcall convention)
+; (for more info on calling conventions, although not especially relevant, see
+; http://www.agner.org/optimize/calling_conventions.pdf)
 
 ; print the character in dl to the screen at position given by ecx,
 ; then increment ecx in preparation for next character
@@ -180,12 +204,14 @@ pm32_puthex:
 
 ; get the value of the instruction pointer in a convoluted way, since x86
 ; doesn't let us do `mov eax, eip`
+; (see http://f.osdev.org/viewtopic.php?f=13&t=18936)
 pm32_get_eip:
   mov eax, [esp]
   ret
 
 ; check if cpuid is supported by attempting to flip the id bit (bit 21) in
 ; the flags register. if we can flip it, cpuid is available.
+; (see http://wiki.osdev.org/Setting_Up_Long_Mode#Detection_of_CPUID)
 pm32_check_cpuid_supported:
   ; copy flags in to eax via stack
   pushfd
@@ -223,6 +249,7 @@ pm32_check_cpuid_supported:
 ; check long mode is supported by first checking if we support cpuid, then
 ; checking if the function to check if long mode is supported is supported,
 ; then finally checking if long mode is supported :)
+; (see http://wiki.osdev.org/Setting_Up_Long_Mode#x86_or_x86-64)
 pm32_check_long_mode_supported:
   call pm32_check_cpuid_supported
 
@@ -243,7 +270,11 @@ pm32_check_long_mode_supported:
   jmp hang
 
 
+; TODO: we should really have some kind of guard to ensure this does not
+; accidentally overflow into somewhere important!
 STACK_SIZE equ 0x4000
+
+; the value of eax when we get control of the machine from grub (see 3.3)
 MULTIBOOT_EXPECTED_MAGIC equ 0x36d76289
 
 ;;;;;;;;;;;;;;;;;
@@ -252,7 +283,7 @@ MULTIBOOT_EXPECTED_MAGIC equ 0x36d76289
 start:
   mov esp, stack+STACK_SIZE ; setup stack
 
-  ; state of the machine at this point:
+  ; state of the machine at this point: (see section 3.3 for more details)
   ; eax contains multiboot magic value (MULTIBOOT_EXPECTED_MAGIC)
   ; ebx contains the physical address of the multiboot information structure
   ; segment registers set to offset 0, limit 0xffffffff
@@ -271,9 +302,9 @@ start:
   jmp hang
 .correct_magic:
 
-  push ebx ; multiboot info
+  push ebx ; multiboot info, for later use
 
-  ; print hello world string to screen as a sanity check
+  ; debug: print hello world string to screen as a sanity check
   mov ecx, TEXT_SCREEN_MEMORY
   mov edx, hello_world_str
   call pm32_putstr
@@ -281,12 +312,12 @@ start:
   ; ensure we can use long mode, and print an error otherwise
   call pm32_check_long_mode_supported
 
-  ; tell the user we can use long mode
+  ; debug: tell the user we can use long mode
   mov ecx, TEXT_SCREEN_MEMORY+TEXT_SCREEN_ROW
   mov edx, long_mode_supported_str
   call pm32_putstr
 
-  ; print out current eip
+  ; debug: print out current eip
   mov ecx, TEXT_SCREEN_MEMORY+2*TEXT_SCREEN_ROW
   mov edx, instruction_ptr_str
   call pm32_putstr
@@ -294,7 +325,7 @@ start:
   mov edx, eax
   call pm32_puthex
 
-  ; print address of multiboot information structure
+  ; debug: print address of multiboot information structure
   mov ecx, TEXT_SCREEN_MEMORY+3*TEXT_SCREEN_ROW
   mov edx, multiboot_info_ptr_str
   call pm32_putstr
@@ -415,7 +446,7 @@ start:
   or eax, 1 << 31
   mov cr0, eax
 
-  ; tell the user we've set up paging
+  ; debug: tell the user we've set up paging
   mov ecx, TEXT_SCREEN_MEMORY+6*TEXT_SCREEN_ROW
   mov edx, paging_set_up_str
   call pm32_putstr
@@ -427,8 +458,9 @@ start:
                                ; mode by performing a far jump
 
 hang:
-  hlt
-  jmp hang
+  hlt ; halt the cpu
+  jmp hang ; if we got a non-maskable interrupt or something like that, just
+           ; continue to halt
 
 [bits 64]
 
@@ -501,15 +533,20 @@ lm64_puthex:
 
 realm64: ; from here on we are officially (like, actually) in long mode!
 
-  ; load our module address, print it out and jump straight to it!
+  ; debug: load our module address (as placed on the stack by us at
+  ; .valid_module_start_addr), print it out...
   xor rax, rax
   mov eax, [rsp]
   mov ecx, TEXT_SCREEN_MEMORY + 7*TEXT_SCREEN_ROW
   mov rdx, rax
   call lm64_puthex
+  ; ...and jump straight to it! (note that since we don't know anything about
+  ; the module other than its load address, we're hoping that the module has
+  ; a trampoline or equivalent at the beginning of the module that will kindly
+  ; redirect us to where we actually want to go.
   call rax
 
-  ; if we return from that then all we can do is hang
+  ; if we return from that then all we can do is disable interrupts and hang
   cli
   jmp hang
 
@@ -527,6 +564,8 @@ hex_digit_lookup_str: db "0123456789abcdef", 0
 
 
 ; global descriptor table
+; (see http://wiki.osdev.org/Setting_Up_Long_Mode#Entering_the_64-bit_Submode)
+; (see http://wiki.osdev.org/Global_Descriptor_Table)
 
 gdt64:                ; global descriptor table (64-bit).
 .null: equ $ - gdt64  ; the null descriptor.
@@ -558,4 +597,5 @@ gdt64:                ; global descriptor table (64-bit).
 section .bss
 align 4
 
+; reserve us some stack space
 stack: resb STACK_SIZE

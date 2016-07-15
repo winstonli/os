@@ -1,6 +1,7 @@
 #include "terminal.h"
 
-extern "C" void get_content(void) {
+// entry point of 64-bit kernel proper, as jumped to from entry.s
+extern "C" void kernel_main(void) {
   terminal_init();
 
   terminal_push_cursor_state(79, 24, terminal_colour_t::WHITE,
