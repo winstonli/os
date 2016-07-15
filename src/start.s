@@ -334,7 +334,8 @@ start:
   call pm32_puthex
 
   ; read and parse multiboot information, looking for modules to jump to
-  ; once we have gotten into long mode.
+  ; once we have gotten into long mode. (see section 3.4.2 through 3.4.12, but
+  ; specifically we are interested in modules as described by 3.4.6)
   mov ecx, TEXT_SCREEN_MEMORY+4*TEXT_SCREEN_ROW
   pop edx ; multiboot information
   push edx
@@ -350,9 +351,9 @@ start:
   mov dl, ':'
   mov ebx, [esi+4] ; size
 
-  cmp eax, 3
+  cmp eax, 3 ; module tags have type = 3
   jne .not_module
-  lea edx, [esi+4*4] ; module path
+  lea edx, [esi+4*4] ; module path (utf-8, \0-terminated string)
   call pm32_putstr
   mov dl, '@'
   call pm32_putchar
@@ -391,8 +392,9 @@ start:
   push edi ; push module start address
 
   ; set up paging
+  ; (see http://wiki.osdev.org/Setting_Up_Long_Mode#Setting_up_the_Paging)
   ; we start by identity mapping the first two megabytes (up to 0x200000)
-  ; (we can change it to higher-half later)
+  ; (TODO: we can change it to higher-half later)
 
   ; our page tables will be located as follows:
   ; P4 / PML4T - 0x1000
@@ -453,14 +455,16 @@ start:
 
   ; So supposedly at this point we are actually in long mode, however
   ; we have one last thing to set up in the form of a global descriptor table
+  ; (http://wiki.osdev.org/Setting_Up_Long_Mode#Entering_the_64-bit_Submode)
   lgdt [gdt64.pointer]         ; load the 64-bit global descriptor table.
   jmp gdt64.code:realm64       ; set the code segment and enter 64-bit long
-                               ; mode by performing a far jump
+                               ; mode by performing a far jump to realm64
 
 hang:
   hlt ; halt the cpu
   jmp hang ; if we got a non-maskable interrupt or something like that, just
            ; continue to halt
+
 
 [bits 64]
 
@@ -594,8 +598,12 @@ gdt64:                ; global descriptor table (64-bit).
   dq gdt64            ; base.
 
 
+; note: ordinarily since we're loading a flat binary, having a .bss section is
+; a recipe for disaster since grub won't load it and we'll be accidentally
+; destroying important bits of memory (probably the kernel), however since we
+; specify the bss section of the loader explicitly in the address tag of the
+; multiboot header, grub should reserve us space for it despite it not actually
+; being in the file at all
 section .bss
-align 4
-
 ; reserve us some stack space
 stack: resb STACK_SIZE
