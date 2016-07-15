@@ -20,4 +20,4 @@ void io_wait();
 // sections, so move any reserved space into .data to ensure we actually
 // allocate it and mark it as static to ensure no lookup table entries are
 // generated!
-#define STATIC(decl) static decl __attribute__((section(".data")))
+#define STATIC [[gnu::section(".data")]] static
