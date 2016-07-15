@@ -2,7 +2,7 @@
 *.d
 *.mod
 *.iso
-loader
+start
 kernel.iso
 *.log
 iso/

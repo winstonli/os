@@ -5,9 +5,6 @@ AS := nasm
 
 MODULES := kernel.mod
 
-ASMFILES := src/start.s
-OBJFILES := $(ASMFILES:.s=.o)
-
 COMMON_FLAGS += -fpic --target=x86_64-pc-none-elf -ffreestanding -fno-builtin -nostdlib -nostdinc -fno-exceptions -fno-rtti -Wimplicit-fallthrough -MMD -mno-sse -mno-mmx
 CFLAGS += $(COMMON_FLAGS) -std=c11
 CXXFLAGS += $(COMMON_FLAGS) -std=c++14 -Isrc/
@@ -35,14 +32,14 @@ bochs: kernel.iso bochsrc.txt
 	bochs
 .PHONY: qemu
 
-kernel.iso: loader grub.cfg $(MODULES)
+kernel.iso: start grub.cfg $(MODULES)
 	mkdir -p iso/boot/grub
-	cp loader iso/boot/loader
+	cp start iso/boot/start
 	cp grub.cfg iso/boot/grub/grub.cfg
 	cp $(MODULES) iso/boot/
 	grub-mkrescue -o $@ iso
 
-loader: loader.ld src/start.o
+start: start.ld src/start.o
 	$(LD) -T $^ $(LDFLAGS) -o $@
 
 %.o: %.s
@@ -60,6 +57,6 @@ kernel.mod: module.ld src/modules/kernel/entry.o src/modules/kernel/main.o src/m
 clean:
 	find . -type f \( -name '*.o' -o -name '*.mod' -o -name '*.d' \) | xargs rm -fv
 	rm -fv *.iso
-	rm -fv loader
+	rm -fv start
 	rm -rfv iso/
 .PHONY: clean

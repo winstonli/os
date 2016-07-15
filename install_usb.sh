@@ -32,7 +32,7 @@ sudo mount "$1"1 "$mount_dir"
 sudo grub-install --root-directory="$mount_dir" --no-floppy --recheck --force "$1"
 
 # copy in kernel and grub config
-sudo cp kernel *.mod "$mount_dir/boot/"
+sudo cp start *.mod "$mount_dir/boot/"
 sudo cp grub.cfg "$mount_dir/boot/grub/"
 
 # ensure data is written, then unmount and eject device
