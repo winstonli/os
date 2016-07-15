@@ -8,6 +8,13 @@ void memzero(char *elems, int num_elems) {
 }
 
 template <>
+void memzero(volatile char *elems, int num_elems) {
+  for (int i = 0; i < num_elems; ++i) {
+    elems[i] = 0;
+  }
+}
+
+template <>
 void memcpy(char *dst, char *src, int num_elems) {
   if (dst < src) {
     // if dst < src then we want to iterate forwards through src to avoid

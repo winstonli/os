@@ -1,5 +1,6 @@
 #include "terminal.h"
 #include "common/common.h"
+#include "common/stdarg.h"
 #include "common/string.h"
 
 #define TEXT_VIDEO_MEMORY ((volatile uint16_t *)(0xb8000))
@@ -43,8 +44,12 @@ void terminal_pop_cursor_state(void) {
 // shift the content of the terminal screen up by one line,
 // does _NOT_ change the position of the cursor
 void terminal_scrollback() {
+  // shift everything up a row
   memcpy(TEXT_VIDEO_MEMORY, TEXT_VIDEO_MEMORY + TEXT_NUM_COLS,
          TEXT_NUM_COLS * (TEXT_NUM_ROWS - 1));
+  // clear the last row
+  memzero(TEXT_VIDEO_MEMORY + TEXT_NUM_COLS * (TEXT_NUM_ROWS - 1),
+          TEXT_NUM_COLS);
 }
 
 void terminal_putchar(char ch) {
@@ -54,12 +59,19 @@ void terminal_putchar(char ch) {
     --elem.y;
   }
   auto where = TEXT_VIDEO_MEMORY + (elem.y * TEXT_NUM_COLS) + elem.x;
-  *where = ch | (elem.colour << 8);
-  // move elem state ready for next character
-  ++elem.x;
-  if (elem.x >= TEXT_NUM_COLS) {
-    ++elem.y;
+  switch (ch) {
+  case '\n':
     elem.x = 0;
+    ++elem.y;
+    break;
+  default:
+    *where = ch | (elem.colour << 8);
+    // move elem state ready for next character
+    ++elem.x;
+    if (elem.x >= TEXT_NUM_COLS) {
+      ++elem.y;
+      elem.x = 0;
+    }
   }
 }
 
@@ -67,4 +79,15 @@ void terminal_write(const char *str) {
   for (; *str != '\0'; ++str) {
     terminal_putchar(*str);
   }
+}
+
+void terminal_printf(const char *format, ...) {
+  va_list params;
+  va_start(params, format);
+
+  for (; *format != '\0'; ++format) {
+    terminal_putchar(*format);
+  }
+
+  va_end(params);
 }

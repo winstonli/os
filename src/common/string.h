@@ -4,11 +4,16 @@
 
 // zero out the given array of elements
 template <typename T>
-void memzero(T *elems, int num_elems) {
+auto memzero(T *elems, int num_elems) -> enable_if_t<!is_volatile_v<T>> {
   memzero(reinterpret_cast<char *>(elems), num_elems * sizeof(T));
 }
 
-// specialisation provided in corresponding cpp file.
+template <typename T>
+auto memzero(T *elems, int num_elems) -> enable_if_t<is_volatile_v<T>> {
+  memzero(reinterpret_cast<volatile char *>(elems), num_elems * sizeof(T));
+}
+
+// specialisations provided in corresponding cpp file.
 template <>
 void memzero(char *elems, int num_elems);
 

@@ -38,3 +38,6 @@ void terminal_putchar(char ch);
 
 // prints the specified null-terminated string to the terminal
 void terminal_write(const char *str);
+
+// C-style printf to text console
+void terminal_printf(const char *format, ...);
