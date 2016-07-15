@@ -10,8 +10,8 @@ struct terminal_cursor_state_t {
   uint8_t x, y, colour;
 };
 
-terminal_cursor_state_t cursor_state_stack[CURSOR_STATE_STACK_MAX_SIZE];
-int cursor_state_stack_idx;
+static terminal_cursor_state_t cursor_state_stack[CURSOR_STATE_STACK_MAX_SIZE];
+static int cursor_state_stack_idx;
 
 void terminal_init(void) {
   cursor_state_stack_idx = 0;

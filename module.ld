@@ -6,11 +6,4 @@ SECTIONS
     *(.rodata)
     *(.data)
   }
-
-  .bss : {
-    sbss = .;
-    *(COMMON)
-    *(.bss)
-    ebss = .;
-  }
 }

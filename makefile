@@ -44,7 +44,7 @@ loader: loader.ld src/start.o
 	nasm -f elf64 $^ -o $@
 
 kernel.mod: module.ld src/modules/kernel/entry.o src/modules/kernel/main.o src/modules/kernel/terminal.o src/common/common.o
-	ld --gc-sections -shared -fpie -T module.ld $^ $(LDFLAGS) -o $@
+	ld --gc-sections -shared -fpie -T $^ $(LDFLAGS) -o $@
 
 %.o: %.c
 	clang $(CFLAGS) -c -o $@ $<
@@ -54,7 +54,7 @@ kernel.mod: module.ld src/modules/kernel/entry.o src/modules/kernel/main.o src/m
 
 clean:
 	find . -type f \( -name '*.o' -o -name '*.mod' -o -name '*.d' \) | xargs rm -fv
-	rm -fv kernel.iso
-	rm -fv kernel
+	rm -fv *.iso
+	rm -fv loader
 	rm -rfv iso/
 .PHONY: clean
