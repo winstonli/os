@@ -10,9 +10,13 @@ extern "C" void get_content(void) {
 
   terminal_push_cursor_state(10, 10, terminal_colour_t::GREEN,
                              terminal_colour_t::BLACK);
+
+  for (int i = -11; i < 11; ++i) {
+    terminal_printf("%d,", i);
+  }
   while (true) {
     for (int j = 0; j < 10; ++j) {
-      for (int i = 0; i < 1000000; ++i) {
+      for (int i = 0; i < 2000000; ++i) {
       }
       terminal_putchar('.');
     }

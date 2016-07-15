@@ -81,12 +81,93 @@ void terminal_write(const char *str) {
   }
 }
 
+void terminal_print_64bit_unsigned(uint64_t value, const char *alphabet) {
+  bool seen_nonzero = false;
+  for (int divisor = 60; divisor >= 0; divisor -= 4) {
+    uint64_t digit_idx = (value >> divisor) & 0xf;
+    if (digit_idx > 0 || seen_nonzero) {
+      terminal_putchar(alphabet[digit_idx]);
+      seen_nonzero = true;
+    }
+  }
+  if (!seen_nonzero) {
+    terminal_putchar('0');
+  }
+}
+
+void terminal_print_hex(uint64_t value) {
+  terminal_write("0x");
+  bool seen_nonzero = false;
+  for (int divisor = 60; divisor >= 0; divisor -= 4) {
+    uint64_t digit_idx = (value >> divisor) & 0xf;
+    if (digit_idx > 0 || seen_nonzero) {
+      terminal_putchar("0123456789abcdef"[digit_idx]);
+      seen_nonzero = true;
+    }
+  }
+  if (!seen_nonzero) {
+    terminal_putchar('0');
+  }
+}
+
+void terminal_print_dec_unsigned(uint64_t value) {
+  bool seen_nonzero = false;
+  for (uint64_t divisor = 10000000000000000000ull; divisor > 0; divisor /= 10) {
+    uint64_t digit_idx = (value / divisor) % 10;
+    if (digit_idx > 0 || seen_nonzero) {
+      terminal_putchar('0' + digit_idx);
+      seen_nonzero = true;
+    }
+  }
+  if (!seen_nonzero) {
+    terminal_putchar('0');
+  }
+}
+
+void terminal_print_dec_signed(int64_t value) {
+  // TODO: we don't handle MIN_INT
+  if (value < 0) {
+    terminal_putchar('-');
+    value = -value;
+  }
+  terminal_print_dec_unsigned(value);
+}
+
 void terminal_printf(const char *format, ...) {
   va_list params;
   va_start(params, format);
 
+  bool got_percent = false;
   for (; *format != '\0'; ++format) {
-    terminal_putchar(*format);
+    char ch = *format;
+    if (ch == '%') {
+      if (got_percent) {
+        terminal_putchar('%');
+      }
+      got_percent = !got_percent;
+      continue;
+    }
+    if (!got_percent) {
+      terminal_putchar(ch);
+      continue;
+    }
+    switch (ch) {
+    case 'x': {
+      auto arg = va_arg(params, uint64_t);
+      terminal_print_hex(arg);
+      got_percent = false;
+      break;
+    }
+    case 'd': {
+      auto arg = va_arg(params, int32_t);
+      terminal_print_dec_signed(arg);
+      got_percent = false;
+      break;
+    }
+    default:
+      terminal_putchar(ch);
+      got_percent = false;
+    }
   }
 
   va_end(params);

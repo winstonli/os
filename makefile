@@ -8,7 +8,7 @@ MODULES := kernel.mod
 ASMFILES := src/start.s
 OBJFILES := $(ASMFILES:.s=.o)
 
-COMMON_FLAGS += -fpic --target=x86_64-pc-none-elf -ffreestanding -fno-builtin -nostdlib -nostdinc -fno-exceptions -fno-rtti -Wimplicit-fallthrough -MMD
+COMMON_FLAGS += -fpic --target=x86_64-pc-none-elf -ffreestanding -fno-builtin -nostdlib -nostdinc -fno-exceptions -fno-rtti -Wimplicit-fallthrough -MMD -mno-sse -mno-mmx
 CFLAGS += $(COMMON_FLAGS) -std=c11
 CXXFLAGS += $(COMMON_FLAGS) -std=c++14 -Isrc/
 
