@@ -1,3 +1,8 @@
+CC := clang
+CXX := clang++
+LD := ld
+AS := nasm
+
 MODULES := kernel.mod
 
 ASMFILES := src/start.s
@@ -38,19 +43,19 @@ kernel.iso: loader grub.cfg $(MODULES)
 	grub-mkrescue -o $@ iso
 
 loader: loader.ld src/start.o
-	ld -T $^ $(LDFLAGS) -o $@
+	$(LD) -T $^ $(LDFLAGS) -o $@
 
 %.o: %.s
-	nasm -f elf64 $^ -o $@
+	$(AS) -f elf64 $^ -o $@
 
 kernel.mod: module.ld src/modules/kernel/entry.o src/modules/kernel/main.o src/modules/kernel/terminal.o src/common/common.o src/common/string.o
-	ld --gc-sections -shared -fpie -T $^ $(LDFLAGS) -o $@
+	$(LD) --gc-sections -shared -fpie -T $^ $(LDFLAGS) -o $@
 
 %.o: %.c
-	clang $(CFLAGS) -c -o $@ $<
+	$(CC) $(CFLAGS) -c -o $@ $<
 
 %.o: %.cpp
-	clang++ $(CXXFLAGS) -c -o $@ $<
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
 clean:
 	find . -type f \( -name '*.o' -o -name '*.mod' -o -name '*.d' \) | xargs rm -fv
