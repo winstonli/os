@@ -21,3 +21,4 @@ void io_wait();
 // allocate it and mark it as static to ensure no lookup table entries are
 // generated!
 #define STATIC [[gnu::section(".data")]] static
+#define PACKED __attribute__((packed))

@@ -152,6 +152,12 @@ void terminal_printf(const char *format, ...) {
       continue;
     }
     switch (ch) {
+    case 's': {
+      auto arg = va_arg(params, const char *);
+      terminal_write(arg);
+      got_percent = false;
+      break;
+    }
     case 'x': {
       auto arg = va_arg(params, uint64_t);
       terminal_print_hex(arg);

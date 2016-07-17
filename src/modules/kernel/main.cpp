@@ -1,3 +1,4 @@
+#include "common/multiboot2.h"
 #include "terminal.h"
 
 // entry point of 64-bit kernel proper, as jumped to from entry.s
@@ -15,7 +16,7 @@ extern "C" void kernel_main(void) {
   uint64_t rip = 0;
   asm volatile("leaq (%%rip), %0" : "=r"(rip));
 
-  terminal_printf("Current instruction pointer is around: %x\n", rip);
+  terminal_printf("%s: %x\n", "Current instruction pointer is around", rip);
 
   for (int i = -11; i < 11; ++i) {
     terminal_printf("%d,", i);
