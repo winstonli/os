@@ -9,8 +9,13 @@ extern "C" void kernel_main(void) {
   terminal_putchar('.');
   terminal_pop_cursor_state();
 
-  terminal_push_cursor_state(10, 10, terminal_colour_t::GREEN,
+  terminal_push_cursor_state(4, 10, terminal_colour_t::GREEN,
                              terminal_colour_t::BLACK);
+
+  uint64_t rip = 0;
+  asm volatile("leaq (%%rip), %0" : "=r"(rip));
+
+  terminal_printf("Current instruction pointer is around: %x\n", rip);
 
   for (int i = -11; i < 11; ++i) {
     terminal_printf("%d,", i);

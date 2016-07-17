@@ -396,31 +396,43 @@ start:
   ; we start by identity mapping the first two megabytes (up to 0x200000)
   ; (TODO: we can change it to higher-half later)
 
-  ; our page tables will be located as follows:
+  ; our page tables will be located as follows
   ; P4 / PML4T - 0x1000
-  ; P3 / PDPT - 0x2000
+  ; P3 / PDPT - 0x2000 (high) and 0x5000 (ident)
   ; P2 / PDT - 0x3000
   ; P1 / PT - 0x4000
   ; hopefully these won't clash with grub, which tends to load things
   ; much higher in the memory space
 
-  mov edi, 0x1000
+P4_ADDR equ 0x1000
+P3_HIGH_ADDR equ 0x2000
+P2_ADDR equ 0x3000
+P1_ADDR equ 0x4000
+P3_IDENT_ADDR equ 0x5000
+
+PAGE_PRESENT equ 0x1
+PAGE_WRITABLE equ 0x3
+
+; this is the offset that we will add to every absolute memory access
+; once the higher half addressing is activated (equiv. to 0xffff fffc 0000 0000)
+HIGH_ADDR_OFFSET equ -0x40000000
+
+  mov edi, P4_ADDR
   mov cr3, edi ; set the location of P4 to 0x1000
 
   xor eax, eax
-  mov ecx, 4096
-  rep stosd ; zero the first 4096 dwords of memory (i.e. 4096*4 = 0x4000 bytes)
+  mov ecx, 0x8000
+  rep stosb ; zero the first 0x8000 bytes of memory (inc. 0x1000 to 0x7000,
+            ; to clear all the page tables)
 
-  mov edi, cr3
+  ; map 0th entry of each of the page tables to the next table in the chain
   ; the trailing 3s here indicate that the age is present and r/w
-  mov dword [edi], 0x2003      ; map 0th entry of P4 to 0x2000
-  add edi, 0x1000
-  mov dword [edi], 0x3003      ; map 0th entry of P3 to 0x3000
-  add edi, 0x1000
-  mov dword [edi], 0x4003      ; map 0th entry of P2 to 0x4000
-  add edi, 0x1000
+  mov dword [P4_ADDR], P3_IDENT_ADDR | PAGE_WRITABLE | PAGE_PRESENT
+  mov dword [P3_IDENT_ADDR], P2_ADDR | PAGE_WRITABLE | PAGE_PRESENT
+  mov dword [P2_ADDR], P1_ADDR | PAGE_WRITABLE | PAGE_PRESENT
 
   ; finally, identity map all 512 entries of P1 at 0x4000!
+  mov edi, P1_ADDR
   mov ebx, 0x3 ; start at address 0, with flags as above
   mov ecx, 512
 
@@ -446,7 +458,7 @@ start:
   ; enable paging by setting bit 31 of control register 0
   mov eax, cr0
   or eax, 1 << 31
-  mov cr0, eax
+  mov cr0, eax ; paging is enabled as soon as this register is set
 
   ; debug: tell the user we've set up paging
   mov ecx, TEXT_SCREEN_MEMORY+6*TEXT_SCREEN_ROW
@@ -491,8 +503,16 @@ lm64_putstr:
 
 
 lm64_puthexdigit:
-  mov dl, [hex_digit_lookup_str + rdx]
+  ; cannot use the alphabet used in 32-bit mode due to the fact we do not know
+  ; whether to reference it with a high or physical address!
+  cmp rdx, 10
+  jb lm64_putdigit
+  add rdx, 'a'-10
   jmp lm64_putchar
+lm64_putdigit:
+  add rdx, '0'
+  jmp lm64_putchar
+
 
 lm64_puthex:
   push rdx
@@ -537,17 +557,50 @@ lm64_puthex:
 
 realm64: ; from here on we are officially (like, actually) in long mode!
 
+  ; debug: check that hex printing works for negative numbers
+  ; (we expect to see 0xffffffffffffffff)
+  mov rdx, HIGH_ADDR_OFFSET
+  mov ecx, TEXT_SCREEN_MEMORY + 7*TEXT_SCREEN_ROW
+  call lm64_puthex
+
+  ; for higher-half mapping we need slightly more annoying arithmetic.
+  ; we want to map the kernel to -2gb in general, so all existing physical
+  ; addresses can be converted simply by subtracting 2gb = 0x8000 0000
+  ; this means we want P4[0x1ff] (the final entry) to point to P3_HIGH
+  ; and P3_HIGH[0x1ff] to P2_HIGH. P2_HIGH and P1_HIGH are mapped as in
+  ; identity mapping so in fact we don't need to do any extra work and can
+  ; just reuse them (i.e. P2_HIGH = P2_IDENT)!
+  mov qword [P4_ADDR + 0x1ff*8], P3_HIGH_ADDR | PAGE_WRITABLE | PAGE_PRESENT
+  mov qword [P3_HIGH_ADDR + 0x1ff*8], P2_ADDR | PAGE_WRITABLE | PAGE_PRESENT
+
+  lea rax, [.realm64_high]
+  mov rdx, HIGH_ADDR_OFFSET
+  add rax, rdx
+  add rsp, rdx
+  jmp rax
+.realm64_high:
+
+  ; unset identity mapping values
+  mov dword [P4_ADDR + HIGH_ADDR_OFFSET], 0
+  mov dword [P3_IDENT_ADDR + HIGH_ADDR_OFFSET], 0
+
   ; debug: load our module address (as placed on the stack by us at
   ; .valid_module_start_addr), print it out...
   xor rax, rax
   mov eax, [rsp]
-  mov ecx, TEXT_SCREEN_MEMORY + 7*TEXT_SCREEN_ROW
-  mov rdx, rax
+  mov ecx, TEXT_SCREEN_MEMORY + 8*TEXT_SCREEN_ROW
+
+  mov rdx, HIGH_ADDR_OFFSET
+  add rdx, rax
+  mov rax, rdx
+
   call lm64_puthex
   ; ...and jump straight to it! (note that since we don't know anything about
   ; the module other than its load address, we're hoping that the module has
   ; a trampoline or equivalent at the beginning of the module that will kindly
   ; redirect us to where we actually want to go.
+
+
   call rax
 
   ; if we return from that then all we can do is disable interrupts and hang
