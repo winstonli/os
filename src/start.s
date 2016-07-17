@@ -140,6 +140,7 @@ pm32_putstr:
 .done:
   ret
 
+%ifdef DEBUG
 ; print the character corresponding to the value of dl in hexadecimal
 ; assumes that dl is in the range [0-15] inclusive, see putchar
 pm32_puthexdigit:
@@ -208,6 +209,7 @@ pm32_puthex:
 pm32_get_eip:
   mov eax, [esp]
   ret
+%endif
 
 ; check if cpuid is supported by attempting to flip the id bit (bit 21) in
 ; the flags register. if we can flip it, cpuid is available.
@@ -306,14 +308,17 @@ start:
   push eax
   push ebx
 
+%ifdef DEBUG
   ; debug: print hello world string to screen as a sanity check
   mov ecx, TEXT_SCREEN_MEMORY
   mov edx, hello_world_str
   call pm32_putstr
+%endif
 
   ; ensure we can use long mode, and print an error otherwise
   call pm32_check_long_mode_supported
 
+%ifdef DEBUG
   ; debug: tell the user we can use long mode
   mov ecx, TEXT_SCREEN_MEMORY+TEXT_SCREEN_ROW
   mov edx, long_mode_supported_str
@@ -335,45 +340,67 @@ start:
   push edx
   call pm32_puthex
 
+  mov ecx, TEXT_SCREEN_MEMORY+4*TEXT_SCREEN_ROW
+%endif
+
   ; read and parse multiboot information, looking for modules to jump to
   ; once we have gotten into long mode. (see section 3.4.2 through 3.4.12, but
   ; specifically we are interested in modules as described by 3.4.6)
-  mov ecx, TEXT_SCREEN_MEMORY+4*TEXT_SCREEN_ROW
   pop edx ; multiboot information
   push edx
   lea esi, [edx+8] ; start of multiboot information tags
   xor edi, edi ; zero out module start address so we can check we actually
                ; found one later!
+
 .parse_multiboot_header:
+
+%ifdef DEBUG
   mov dl, 't'
   call pm32_putchar
-  mov edx, [esi] ; type
-  mov eax, edx
-  call pm32_puthex ; print type of tag
-  mov dl, ':'
+%endif
+
+  mov eax, [esi] ; type
   mov ebx, [esi+4] ; size
+
+%ifdef DEBUG
+  mov edx, eax
+  call pm32_puthex ; print type of tag
+%endif
 
   cmp eax, 3 ; module tags have type = 3
   jne .not_module
+
+%ifdef DEBUG
   lea edx, [esi+4*4] ; module path (utf-8, \0-terminated string)
   call pm32_putstr
   mov dl, '@'
   call pm32_putchar
-  mov edx, [esi+2*4] ; module start
-  mov edi, edx       ; store module start in edi so we can jump to it
+%endif
+
+  mov edi, [esi+2*4] ; module start, store in edi so we can jump to it
                      ; once we enter 64-bit mode!
+
+%ifdef DEBUG
+  mov edx, edi
   call pm32_puthex
   mov dl, ' '
   call pm32_putchar
+%endif
+
   jmp .parse_multiboot_header_next
 
 .not_module:
   cmp eax, 0
   je .parse_multiboot_header_end
+
 .parse_multiboot_header_next:
+  add esi, ebx
+
+%ifdef DEBUG
   mov dl, ' '
   call pm32_putchar
-  add esi, ebx
+%endif
+
 .parse_multiboot_header_next2:
   ; increment until we are aligned according to MULTIBOOT_ALIGNMENT,
   ; then jump back and continue
@@ -381,6 +408,7 @@ start:
   jz .parse_multiboot_header
   inc esi
   jmp .parse_multiboot_header_next2
+
 .parse_multiboot_header_end:
 
   ; check that we found a good start address
@@ -462,10 +490,12 @@ HIGH_ADDR_OFFSET equ -0x40000000
   or eax, 1 << 31
   mov cr0, eax ; paging is enabled as soon as this register is set
 
+%ifdef DEBUG
   ; debug: tell the user we've set up paging
   mov ecx, TEXT_SCREEN_MEMORY+6*TEXT_SCREEN_ROW
   mov edx, paging_set_up_str
   call pm32_putstr
+%endif
 
   ; So supposedly at this point we are actually in long mode, however
   ; we have one last thing to set up in the form of a global descriptor table
@@ -482,6 +512,7 @@ hang:
 
 [bits 64]
 
+%ifdef DEBUG
 ; these functions are all just 64-bit versions of those defined above
 ; (i.e. for documentation, see s/lm64/pm32/)
 
@@ -502,7 +533,6 @@ lm64_putstr:
   jmp lm64_putstr
 .done:
   ret
-
 
 lm64_puthexdigit:
   ; cannot use the alphabet used in 32-bit mode due to the fact we do not know
@@ -556,14 +586,9 @@ lm64_puthex:
   mov rcx, rax
   pop rax
   ret
+%endif
 
 realm64: ; from here on we are officially (like, actually) in long mode!
-
-  ; debug: check that hex printing works for negative numbers
-  ; (we expect to see 0xffffffffffffffff)
-  mov rdx, HIGH_ADDR_OFFSET
-  mov ecx, TEXT_SCREEN_MEMORY + 7*TEXT_SCREEN_ROW
-  call lm64_puthex
 
   ; for higher-half mapping we need slightly more annoying arithmetic.
   ; we want to map the kernel to -2gb in general, so all existing physical
@@ -582,21 +607,41 @@ realm64: ; from here on we are officially (like, actually) in long mode!
   jmp rax
 .realm64_high:
 
+%ifdef DEBUG
+  ; debug: check that hex printing works for negative numbers
+  ; (we expect to see 0xffffffffffffffff)
+  mov rdx, HIGH_ADDR_OFFSET
+  mov ecx, TEXT_SCREEN_MEMORY + 7*TEXT_SCREEN_ROW
+  call lm64_puthex
+%endif
+
   ; unset identity mapping values
+%ifdef DEBUG
+  ; debug: check that hex printing works for negative numbers
+  ; (we expect to see 0xffffffffffffffff)
+  mov edx, [P4_ADDR + HIGH_ADDR_OFFSET]
+  mov ecx, TEXT_SCREEN_MEMORY + 8*TEXT_SCREEN_ROW
+  call lm64_puthex
+  mov edx, P3_IDENT_ADDR
+  call lm64_puthex
+%endif
   mov dword [P4_ADDR + HIGH_ADDR_OFFSET], 0
   mov dword [P3_IDENT_ADDR + HIGH_ADDR_OFFSET], 0
 
-  ; debug: load our module address (as placed on the stack by us at
-  ; .valid_module_start_addr), print it out...
+  invlpg [TEXT_SCREEN_MEMORY] ; invalidate something in the old address range
+
+  ; load our module address (as placed on the stack by us at
+  ; .valid_module_start_addr), debug print it out...
   xor rax, rax
   mov eax, [rsp]
-  mov ecx, TEXT_SCREEN_MEMORY + 8*TEXT_SCREEN_ROW
-
   mov rdx, HIGH_ADDR_OFFSET
-  add rdx, rax
-  mov rax, rdx
+  add rax, rdx
 
+%ifdef DEBUG
+  mov rcx, TEXT_SCREEN_MEMORY + 9*TEXT_SCREEN_ROW + HIGH_ADDR_OFFSET
+  mov rdx, rcx
   call lm64_puthex
+%endif
 
   ; at this point (hopefully)
   ; [rsp+0] = module physical address
@@ -614,6 +659,7 @@ realm64: ; from here on we are officially (like, actually) in long mode!
   ; the module other than its load address, we're hoping that the module has
   ; a trampoline or equivalent at the beginning of the module that will kindly
   ; redirect us to where we actually want to go.
+
   call rax
 
   ; if we return from that then all we can do is disable interrupts and hang
@@ -621,16 +667,18 @@ realm64: ; from here on we are officially (like, actually) in long mode!
   jmp hang
 
 section .data
+%ifdef DEBUG
 hello_world_str: db "Hello World!", 0
 instruction_ptr_str: db "Current instruction pointer is ", 0
 multiboot_info_ptr_str: db "Multiboot information structure is at ", 0
 long_mode_supported_str: db "Long mode seems to be supported! :)", 0
 paging_set_up_str: db "Finished setting up 64-bit paging!", 0
+hex_digit_lookup_str: db "0123456789abcdef", 0
+%endif
 error_wrong_magic_str: db "Error: Incorrect multiboot magic number!", 0
 error_no_cpuid_str: db "Error: The CPUID instruction does not appear to be supported!", 0
 error_no_long_mode_str: db "Error: Long mode does not appear to be supported!", 0
 error_no_kernel_module_str: db "Error: No valid kernel module appears to have been loaded!", 0
-hex_digit_lookup_str: db "0123456789abcdef", 0
 
 
 ; global descriptor table
