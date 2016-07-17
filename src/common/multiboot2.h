@@ -32,24 +32,10 @@
 #pragma clang diagnostic ignored "-Wgnu-anonymous-struct"
 #pragma clang diagnostic ignored "-Wnested-anon-types"
 
-/* How many bytes from the start of the file we search for the header.  */
-#define MULTIBOOT_SEARCH 32768
-#define MULTIBOOT_HEADER_ALIGN 8
-
-/* The magic field should contain this.  */
-#define MULTIBOOT2_HEADER_MAGIC 0xe85250d6
-
 /* This should be in %eax.  */
 #define MULTIBOOT2_BOOTLOADER_MAGIC 0x36d76289
 
-/* Alignment of multiboot modules.  */
-#define MULTIBOOT_MOD_ALIGN 0x00001000
-
-/* Alignment of the multiboot info structure.  */
-#define MULTIBOOT_INFO_ALIGN 0x00000008
-
 /* Flags set in the 'flags' member of the multiboot header.  */
-
 #define MULTIBOOT_TAG_ALIGN 8
 #define MULTIBOOT_TAG_TYPE_END 0
 #define MULTIBOOT_TAG_TYPE_CMDLINE 1
@@ -71,19 +57,6 @@
 #define MULTIBOOT_TAG_TYPE_EFI_MMAP 17
 #define MULTIBOOT_TAG_TYPE_EFI_BS 18
 
-#define MULTIBOOT_HEADER_TAG_END 0
-#define MULTIBOOT_HEADER_TAG_INFORMATION_REQUEST 1
-#define MULTIBOOT_HEADER_TAG_ADDRESS 2
-#define MULTIBOOT_HEADER_TAG_ENTRY_ADDRESS 3
-#define MULTIBOOT_HEADER_TAG_CONSOLE_FLAGS 4
-#define MULTIBOOT_HEADER_TAG_FRAMEBUFFER 5
-#define MULTIBOOT_HEADER_TAG_MODULE_ALIGN 6
-#define MULTIBOOT_HEADER_TAG_EFI_BS 7
-
-#define MULTIBOOT_ARCHITECTURE_I386 0
-#define MULTIBOOT_ARCHITECTURE_MIPS32 4
-#define MULTIBOOT_HEADER_TAG_OPTIONAL 1
-
 #define MULTIBOOT_CONSOLE_FLAGS_CONSOLE_REQUIRED 1
 #define MULTIBOOT_CONSOLE_FLAGS_EGA_TEXT_SUPPORTED 2
 
@@ -91,75 +64,6 @@ typedef unsigned char multiboot_uint8_t;
 typedef unsigned short multiboot_uint16_t;
 typedef unsigned int multiboot_uint32_t;
 typedef unsigned long long multiboot_uint64_t;
-
-struct multiboot_header {
-  /* Must be MULTIBOOT_MAGIC - see above.  */
-  multiboot_uint32_t magic;
-
-  /* ISA */
-  multiboot_uint32_t architecture;
-
-  /* Total header length.  */
-  multiboot_uint32_t header_length;
-
-  /* The above fields plus this one must equal 0 mod 2^32. */
-  multiboot_uint32_t checksum;
-};
-
-struct multiboot_header_tag {
-  multiboot_uint16_t type;
-  multiboot_uint16_t flags;
-  multiboot_uint32_t size;
-};
-
-struct multiboot_header_tag_information_request {
-  multiboot_uint16_t type;
-  multiboot_uint16_t flags;
-  multiboot_uint32_t size;
-  multiboot_uint32_t requests[0];
-};
-
-struct multiboot_header_tag_address {
-  multiboot_uint16_t type;
-  multiboot_uint16_t flags;
-  multiboot_uint32_t size;
-  multiboot_uint32_t header_addr;
-  multiboot_uint32_t load_addr;
-  multiboot_uint32_t load_end_addr;
-  multiboot_uint32_t bss_end_addr;
-};
-
-struct multiboot_header_tag_entry_address {
-  multiboot_uint16_t type;
-  multiboot_uint16_t flags;
-  multiboot_uint32_t size;
-  multiboot_uint32_t entry_addr;
-};
-
-struct multiboot_header_tag_console_flags {
-  multiboot_uint16_t type;
-  multiboot_uint16_t flags;
-  multiboot_uint32_t size;
-  multiboot_uint32_t console_flags;
-};
-
-struct multiboot_header_tag_framebuffer {
-  multiboot_uint16_t type;
-  multiboot_uint16_t flags;
-  multiboot_uint32_t size;
-  multiboot_uint32_t width;
-  multiboot_uint32_t height;
-  multiboot_uint32_t depth;
-};
-
-struct multiboot_header_tag_module_align {
-  multiboot_uint16_t type;
-  multiboot_uint16_t flags;
-  multiboot_uint32_t size;
-  multiboot_uint32_t width;
-  multiboot_uint32_t height;
-  multiboot_uint32_t depth;
-};
 
 struct multiboot_color {
   multiboot_uint8_t red;

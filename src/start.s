@@ -302,7 +302,9 @@ start:
   jmp hang
 .correct_magic:
 
-  push ebx ; multiboot info, for later use
+  ; push magic (eax) and multiboot info (ebx) for later use
+  push eax
+  push ebx
 
   ; debug: print hello world string to screen as a sanity check
   mov ecx, TEXT_SCREEN_MEMORY
@@ -595,12 +597,23 @@ realm64: ; from here on we are officially (like, actually) in long mode!
   mov rax, rdx
 
   call lm64_puthex
+
+  ; at this point (hopefully)
+  ; [rsp+0] = module physical address
+  ; [rsp+4] = information structure physical address
+  ; [rsp+8] = multiboot2 magic value
+  ; load arguments 1/2 with the magic and information structure (in the right
+  ; address space of course!) and jump to the module address
+  xor rdi, rdi ; zero out the high 32-bits of rdi/rsi
+  xor rsi, rsi
+  mov edi, dword [rsp+8] ; magic
+  mov esi, dword [rsp+4] ; info
+  add rsi, HIGH_ADDR_OFFSET ; convert info physical addr to virtual addr
+
   ; ...and jump straight to it! (note that since we don't know anything about
   ; the module other than its load address, we're hoping that the module has
   ; a trampoline or equivalent at the beginning of the module that will kindly
   ; redirect us to where we actually want to go.
-
-
   call rax
 
   ; if we return from that then all we can do is disable interrupts and hang
