@@ -4,6 +4,8 @@ LD := ld
 AS := nasm
 
 MODULES := kernel.mod
+COMMON_OBJFILES += src/common/common.o src/common/string.o \
+                   src/common/interrupts.o
 
 COMMON_FLAGS += -fpic --target=x86_64-pc-none-elf -ffreestanding -fno-builtin \
                 -nostdlib -nostdinc -fno-exceptions -fno-rtti \
@@ -50,7 +52,7 @@ start: start.ld src/start.o
 %.o: %.s
 	$(AS) -f elf64 $^ -o $@
 
-kernel.mod: module.ld src/modules/kernel/entry.o src/modules/kernel/main.o src/modules/kernel/terminal.o src/common/common.o src/common/string.o
+kernel.mod: module.ld src/modules/kernel/entry.o src/modules/kernel/main.o src/modules/kernel/terminal.o $(COMMON_OBJFILES)
 	$(LD) --gc-sections -shared -fpie -T $^ $(LDFLAGS) -o $@
 
 %.o: %.c
