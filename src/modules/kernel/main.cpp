@@ -1,5 +1,7 @@
 #include "common/common.h"
+#include "common/interrupts.h"
 #include "common/multiboot2.h"
+#include "interrupt.h"
 #include "terminal.h"
 
 // entry point of 64-bit kernel proper, as jumped to from entry.s
@@ -27,6 +29,8 @@ extern "C" void kernel_main(const uint32_t multiboot_magic,
 
   terminal_printf("%s: %x\n", "Current instruction pointer is around", rip);
   terminal_printf("%s: %x\n", "Multiboot data is at", multiboot_data);
+
+  init_interrupt_descriptor_table();
 
   for (int i = -11; i < 11; ++i) {
     terminal_printf("%d,", i);

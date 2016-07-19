@@ -52,7 +52,10 @@ start: start.ld src/start.o
 %.o: %.s
 	$(AS) -f elf64 $^ -o $@
 
-kernel.mod: module.ld src/modules/kernel/entry.o src/modules/kernel/main.o src/modules/kernel/terminal.o $(COMMON_OBJFILES)
+kernel.mod: module.ld src/modules/kernel/entry.o src/modules/kernel/main.o \
+            src/modules/kernel/terminal.o src/modules/kernel/interrupt.o \
+            src/modules/kernel/interrupt_stubs.o \
+            src/modules/kernel/isr_handler.o $(COMMON_OBJFILES)
 	$(LD) --gc-sections -shared -fpie -T $^ $(LDFLAGS) -o $@
 
 %.o: %.c

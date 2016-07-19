@@ -6,7 +6,10 @@
 ; to the real code here (which we did)!
 [bits 64]
 extern kernel_main ; defined in main.cpp
+extern enable_interrupts ; defined in main.cpp
+global entry
 
 section .text
 ; not particularly exciting, just jump to the kernel proper!
+entry:
   jmp kernel_main

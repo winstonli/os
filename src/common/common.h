@@ -22,3 +22,6 @@ void io_wait();
 // generated!
 #define STATIC [[gnu::section(".data")]] static
 #define PACKED __attribute__((packed))
+
+// static assert with no message
+#define STATIC_ASSERT(cond) static_assert(cond, #cond)
