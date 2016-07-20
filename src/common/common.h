@@ -21,6 +21,8 @@ void io_wait();
 // allocate it and mark it as static to ensure no lookup table entries are
 // generated!
 #define STATIC [[gnu::section(".data")]] static
+
+// pack structures to avoid invisible padding
 #define PACKED __attribute__((packed))
 
 // static assert with no message
