@@ -1,6 +1,7 @@
 *.o
 *.d
-*.mod
+*.elf
+*.bin
 *.iso
 start
 kernel.iso

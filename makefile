@@ -3,11 +3,11 @@ CXX := clang++
 LD := ld
 AS := nasm
 
-MODULES := kernel.mod
+MODULES := kernel.bin
 COMMON_OBJFILES += src/common/common.o src/common/string.o \
                    src/common/interrupts.o
 
-COMMON_FLAGS += -fpic --target=x86_64-pc-none-elf -ffreestanding -fno-builtin \
+COMMON_FLAGS += -fPIC --target=x86_64-pc-none-elf -ffreestanding -fno-builtin \
                 -nostdlib -nostdinc -fno-exceptions -fno-rtti \
                 -Wimplicit-fallthrough -MMD -mno-sse -mno-mmx -Wall -Wextra \
                 -pedantic -Wshadow -Wpointer-arith -Wcast-align \
@@ -52,11 +52,14 @@ start: start.ld src/start.o
 %.o: %.s
 	$(AS) -f elf64 $^ -o $@
 
-kernel.mod: module.ld src/modules/kernel/entry.o src/modules/kernel/main.o \
+%.bin: %.elf
+	objcopy -O binary $< $@
+
+kernel.elf: module.ld src/modules/kernel/entry.o src/modules/kernel/main.o \
             src/modules/kernel/terminal.o src/modules/kernel/interrupt.o \
             src/modules/kernel/interrupt_stubs.o \
             src/modules/kernel/isr_handler.o $(COMMON_OBJFILES)
-	$(LD) --gc-sections -shared -fpie -T $^ $(LDFLAGS) -o $@
+	$(LD) -T $^ $(LDFLAGS) -o $@
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c -o $@ $<
@@ -65,8 +68,7 @@ kernel.mod: module.ld src/modules/kernel/entry.o src/modules/kernel/main.o \
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
 clean:
-	find . -type f \( -name '*.o' -o -name '*.mod' -o -name '*.d' \) | xargs rm -fv
-	rm -fv *.iso
+	find . -type f \( -name '*.o' -o -name '*.iso' -o -name '*.elf' -o -name '*.bun' -o -name '*.d' \) | xargs rm -fv
 	rm -fv start
 	rm -rfv iso/
 .PHONY: clean
