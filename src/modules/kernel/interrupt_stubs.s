@@ -1,4 +1,4 @@
-%macro pushAll 0
+%macro push_all 0
       push rax
       push rcx
       push rdx
@@ -8,7 +8,7 @@
       push rdi
 %endmacro
 
-%macro popAll 0
+%macro pop_all 0
       pop rdi
       pop rsi
       pop rbp
