@@ -58,7 +58,8 @@ start: start.ld src/start.o
 kernel.elf: module.ld src/modules/kernel/entry.o src/modules/kernel/main.o \
             src/modules/kernel/terminal.o src/modules/kernel/interrupt.o \
             src/modules/kernel/interrupt_stubs.o \
-            src/modules/kernel/isr_handler.o $(COMMON_OBJFILES)
+            src/modules/kernel/isr_handler.o src/modules/kernel/pic.o \
+            $(COMMON_OBJFILES)
 	$(LD) -T $^ $(LDFLAGS) -o $@
 
 %.o: %.c

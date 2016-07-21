@@ -2,12 +2,14 @@
 #include "common/interrupts.h"
 #include "common/multiboot2.h"
 #include "interrupt.h"
+#include "pic.h"
 #include "terminal.h"
 
 // entry point of 64-bit kernel proper, as jumped to from entry.s
 extern "C" void kernel_main(const uint32_t multiboot_magic,
                             void *multiboot_data) {
   terminal_init();
+  pic_init();
 
   terminal_push_cursor_state(79, 24, terminal_colour_t::WHITE,
                              terminal_colour_t::RED);
@@ -31,6 +33,9 @@ extern "C" void kernel_main(const uint32_t multiboot_magic,
   terminal_printf("%s: %x\n", "Multiboot data is at", multiboot_data);
 
   init_interrupt_descriptor_table();
+
+  out<uint8_t>(0x21, 0xff);
+  out<uint8_t>(0xa1, 0xff);
 
   enable_interrupts();
 
