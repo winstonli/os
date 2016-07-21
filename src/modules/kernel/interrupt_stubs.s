@@ -37,23 +37,22 @@ isr_common:
     mov rax, ds ; save the data segment descriptor
     push rax
 
-    mov rax, 0x10 ; load the kernel data segment descriptor
-    mov ds, rax
-    mov es, rax
-    mov fs, rax
-    mov gs, rax
+    mov ax, 0x10 ; load the kernel data segment descriptor
+    mov ds, ax
+    mov es, ax
+    mov fs, ax
+    mov gs, ax
 
     call isr_handler
 
     pop rbx ; reload the original data descriptor
-    mov ds, rbx
-    mov es, rbx
-    mov fs, rbx
-    mov gs, rbx
+    mov ds, bx
+    mov es, bx
+    mov fs, bx
+    mov gs, bx
 
     pop_all
-    add rsp, 8 ; pop the pushed error code and isr number
-               ; TODO: should this actually be 8?
+    add rsp, 16+3*8 ; pop the pushed error code and isr number
     sti
     iretq
 
