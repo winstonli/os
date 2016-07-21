@@ -20,6 +20,8 @@
 #define PIC1_OFFSET 0x20 // new offset for master (exceptions end at 0x1f)
 #define PIC2_OFFSET 0x28 // new offset for slave
 
+// see http://wiki.osdev.org/PIC#Initialisation
+// and http://stackoverflow.com/questions/282983/setting-up-irq-mapping
 void pic_init() {
   unsigned char a1, a2;
 
