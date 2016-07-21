@@ -32,6 +32,8 @@ extern "C" void kernel_main(const uint32_t multiboot_magic,
 
   init_interrupt_descriptor_table();
 
+  enable_interrupts();
+
   for (int i = -11; i < 11; ++i) {
     terminal_printf("%d,", i);
   }

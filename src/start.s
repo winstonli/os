@@ -4,6 +4,9 @@
 ; multiboot module, allowing us to strictly work with 64-bit code in the
 ; kernel itself so only this file has to deal with the additional complexity
 ; of handling both modes.
+
+%define DEBUG
+
 [bits 32]
 extern link_text_start ; all defined by linker script of `filename.ld`,
 extern link_data_end
@@ -607,10 +610,18 @@ realm64: ; from here on we are officially (like, actually) in long mode!
   jmp rax
 .realm64_high:
 
+  ; load the 64-bit global descriptor table in the right address space
+  ; TODO: we should also do a long jump here to ensure it is fully loaded
+  lea rax, [gdt64.pointer]
+  mov rbx, HIGH_ADDR_OFFSET
+  add [gdt64.pointer+2], rbx
+  add rax, rbx
+  lgdt [rax]
+
 %ifdef DEBUG
   ; debug: check that hex printing works for negative numbers
-  ; (we expect to see 0xffffffffffffffff)
-  mov rdx, HIGH_ADDR_OFFSET
+  ; mov rdx, HIGH_ADDR_OFFSET
+  mov rdx, rax
   mov ecx, TEXT_SCREEN_MEMORY + 7*TEXT_SCREEN_ROW
   call lm64_puthex
 %endif

@@ -1,3 +1,5 @@
+[bits 64]
+
 %macro push_all 0
       push rax
       push rcx
@@ -32,22 +34,22 @@ extern isr_handler
 isr_common:
     push_all
 
-    mov ax, ds ; save the data segment descriptor
+    mov rax, ds ; save the data segment descriptor
     push rax
 
-    mov ax, 0x10 ; load the kernel data segment descriptor
-    mov ds, ax
-    mov es, ax
-    mov fs, ax
-    mov gs, ax
+    mov rax, 0x10 ; load the kernel data segment descriptor
+    mov ds, rax
+    mov es, rax
+    mov fs, rax
+    mov gs, rax
 
     call isr_handler
 
     pop rbx ; reload the original data descriptor
-    mov ds, bx
-    mov es, bx
-    mov fs, bx
-    mov gs, bx
+    mov ds, rbx
+    mov es, rbx
+    mov fs, rbx
+    mov gs, rbx
 
     pop_all
     add rsp, 8 ; pop the pushed error code and isr number
@@ -60,6 +62,9 @@ isr_common:
   isr%1:
     cli
     push byte 0 
+    push byte 0x14
+    push byte 0x15
+    push byte 0x16
     push byte %1
     jmp isr_common
 %endmacro
@@ -69,6 +74,9 @@ isr_common:
   isr%1:
     cli
     push byte %1
+    push byte 0x11
+    push byte 0x12
+    push byte 0x13
     jmp isr_common
 %endmacro
 
