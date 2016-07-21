@@ -504,8 +504,19 @@ HIGH_ADDR_OFFSET equ -0x40000000
   ; we have one last thing to set up in the form of a global descriptor table
   ; (http://wiki.osdev.org/Setting_Up_Long_Mode#Entering_the_64-bit_Submode)
   lgdt [gdt64.pointer]         ; load the 64-bit global descriptor table.
-  jmp gdt64.code:realm64       ; set the code segment and enter 64-bit long
-                               ; mode by performing a far jump to realm64
+
+NULL_SEG equ 0x00 ; indexes into the gdt (see label gdt64)
+CODE_SEG equ 0x08
+DATA_SEG equ 0x10
+
+  mov ax, DATA_SEG ; set indexes for data segment registers to the offset of
+  mov ds, ax       ; the data segment in the gdt
+  mov es, ax
+  mov gs, ax
+  mov fs, ax
+  mov ss, ax
+  jmp CODE_SEG:realm64       ; set the code segment and enter 64-bit long
+                             ; mode by performing a jump to realm64
 
 hang:
   hlt ; halt the cpu
