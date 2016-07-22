@@ -9,16 +9,16 @@ COMMON_OBJFILES += src/common/common.o src/common/string.o \
 
 COMMON_FLAGS += -fPIC --target=x86_64-pc-none-elf -ffreestanding -fno-builtin \
                 -fno-exceptions -fno-rtti \
-                -Wimplicit-fallthrough -MMD -mno-sse -mno-mmx -Wall -Wextra \
+                -MMD -mno-sse -mno-mmx -Wall -Wextra \
                 -pedantic -Wshadow -Wpointer-arith -Wcast-align \
-                -Wwrite-strings -Wmissing-declarations -Wredundant-decls \
-                -Wnested-externs -Winline -Wno-long-long -Wuninitialized
+                -Wwrite-strings -Wredundant-decls \
+                -Winline -Wno-long-long -Wuninitialized
 CFLAGS += $(COMMON_FLAGS) -std=c11
 CXXFLAGS += $(COMMON_FLAGS) -std=c++14 -Isrc/
 
-HFILES = $(shell find . -type f -name '*.h')
-CFILES = $(shell find . -type f -name '*.c')
-CXXFILES = $(shell find . -type f -name '*.cpp')
+HFILES = $(shell find src/ -type f -name '*.h')
+CFILES = $(shell find src/ -type f -name '*.c')
+CXXFILES = $(shell find src/ -type f -name '*.cpp')
 DEPFILES = $(CFILES:.c=.d) $(CXXFILES:.cpp=.d)
 
 LDFLAGS := -nostdlib
@@ -69,7 +69,8 @@ kernel.elf: module.ld src/modules/kernel/entry.o src/modules/kernel/main.o \
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
 clean:
-	find . -type f \( -name '*.o' -o -name '*.iso' -o -name '*.elf' -o -name '*.bun' -o -name '*.d' \) | xargs rm -fv
+	find src/ -type f \( -name '*.o' -o -name '*.d' \) | xargs rm -fv
+	rm -fv *.iso *.elf *.bin
 	rm -fv start
 	rm -rfv iso/
 .PHONY: clean
