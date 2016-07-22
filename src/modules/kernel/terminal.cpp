@@ -1,7 +1,8 @@
 #include "terminal.h"
 #include "common/common.h"
-#include "common/stdarg.h"
 #include "common/string.h"
+
+#include <stdarg.h>
 
 #define TEXT_VIDEO_MEMORY ((volatile uint16_t *)((int64_t)0xb8000 - 0x40000000))
 #define TEXT_NUM_ROWS 25

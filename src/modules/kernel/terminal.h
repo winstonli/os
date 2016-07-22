@@ -1,6 +1,6 @@
 #pragma once
 
-#include "common/stdint.h"
+#include <stdint.h>
 
 enum class terminal_colour_t {
   BLACK = 0x0,

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "stdint.h"
+#include <stdint.h>
 
 // write a piece of data of size T (uint{8,16,32}_t) to the specified port.
 // specialisations provided in correspoding cpp file.

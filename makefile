@@ -8,7 +8,7 @@ COMMON_OBJFILES += src/common/common.o src/common/string.o \
                    src/common/interrupts.o
 
 COMMON_FLAGS += -fPIC --target=x86_64-pc-none-elf -ffreestanding -fno-builtin \
-                -nostdlib -nostdinc -fno-exceptions -fno-rtti \
+                -fno-exceptions -fno-rtti \
                 -Wimplicit-fallthrough -MMD -mno-sse -mno-mmx -Wall -Wextra \
                 -pedantic -Wshadow -Wpointer-arith -Wcast-align \
                 -Wwrite-strings -Wmissing-declarations -Wredundant-decls \

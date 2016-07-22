@@ -1,6 +1,7 @@
 #include "pic.h"
 #include "common/common.h"
-#include "common/stdint.h"
+
+#include <stdint.h>
 
 /* reinitialize the PIC controllers, giving them specified vector offsets
    rather than 8h and 70h, as configured by default */
