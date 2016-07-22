@@ -43,6 +43,8 @@ isr_common:
     mov fs, ax
     mov gs, ax
 
+    mov rdi, rsp
+
     call isr_handler
 
     pop rbx ; reload the original data descriptor
@@ -52,7 +54,7 @@ isr_common:
     mov gs, bx
 
     pop_all
-    add rsp, 16+3*8 ; pop the pushed error code and isr number
+    add rsp, 16 ; pop the pushed error code and isr number
     sti
     iretq
 
@@ -61,9 +63,6 @@ isr_common:
   isr%1:
     cli
     push byte 0 
-    push byte 0x14
-    push byte 0x15
-    push byte 0x16
     push byte %1
     jmp isr_common
 %endmacro
@@ -73,9 +72,6 @@ isr_common:
   isr%1:
     cli
     push byte %1
-    push byte 0x11
-    push byte 0x12
-    push byte 0x13
     jmp isr_common
 %endmacro
 
