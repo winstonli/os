@@ -7,3 +7,4 @@ start
 kernel.iso
 *.log
 iso/
+opt/
