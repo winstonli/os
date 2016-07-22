@@ -63,5 +63,23 @@ void init_interrupt_descriptor_table() {
   idt_set_gate(30, (uint64_t)&isr30, 0x08, 0x8E);
   idt_set_gate(31, (uint64_t)&isr31, 0x08, 0x8E);
 
+  // TODO: move this elsewhere
+  idt_set_gate(0x20 + 0, (uint64_t)&irq0, 0x08, 0x8E);
+  idt_set_gate(0x20 + 1, (uint64_t)&irq1, 0x08, 0x8E);
+  idt_set_gate(0x20 + 2, (uint64_t)&irq2, 0x08, 0x8E);
+  idt_set_gate(0x20 + 3, (uint64_t)&irq3, 0x08, 0x8E);
+  idt_set_gate(0x20 + 4, (uint64_t)&irq4, 0x08, 0x8E);
+  idt_set_gate(0x20 + 5, (uint64_t)&irq5, 0x08, 0x8E);
+  idt_set_gate(0x20 + 6, (uint64_t)&irq6, 0x08, 0x8E);
+  idt_set_gate(0x20 + 7, (uint64_t)&irq7, 0x08, 0x8E);
+  idt_set_gate(0x20 + 8, (uint64_t)&irq8, 0x08, 0x8E);
+  idt_set_gate(0x20 + 9, (uint64_t)&irq9, 0x08, 0x8E);
+  idt_set_gate(0x20 + 10, (uint64_t)&irq10, 0x08, 0x8E);
+  idt_set_gate(0x20 + 11, (uint64_t)&irq11, 0x08, 0x8E);
+  idt_set_gate(0x20 + 12, (uint64_t)&irq12, 0x08, 0x8E);
+  idt_set_gate(0x20 + 13, (uint64_t)&irq13, 0x08, 0x8E);
+  idt_set_gate(0x20 + 14, (uint64_t)&irq14, 0x08, 0x8E);
+  idt_set_gate(0x20 + 15, (uint64_t)&irq15, 0x08, 0x8E);
+
   idt_flush((uint64_t)&idt_ptr);
 }
