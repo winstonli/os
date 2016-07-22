@@ -34,7 +34,7 @@ extern "C" void kernel_main(const uint32_t multiboot_magic,
 
   init_interrupt_descriptor_table();
 
-  out<uint8_t>(0x21, 0xff);
+  out<uint8_t>(0x21, 0xfd);
   out<uint8_t>(0xa1, 0xff);
 
   enable_interrupts();
