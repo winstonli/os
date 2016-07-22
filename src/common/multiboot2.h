@@ -27,10 +27,15 @@
 
 #include "common/common.h"
 
+#if defined(__clang__)
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wzero-length-array"
 #pragma clang diagnostic ignored "-Wgnu-anonymous-struct"
 #pragma clang diagnostic ignored "-Wnested-anon-types"
+#elif defined(__GNUG__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpedantic"
+#endif
 
 /* This should be in %eax.  */
 #define MULTIBOOT2_BOOTLOADER_MAGIC 0x36d76289
@@ -252,4 +257,8 @@ struct multiboot_tag_efi_mmap {
   multiboot_uint8_t efi_mmap[0];
 };
 
+#if defined(__clang__)
 #pragma clang diagnostic pop
+#elif defined(__GNUG__)
+#pragma GCC diagnostic pop
+#endif
