@@ -32,7 +32,9 @@ sudo update-alternatives --install /usr/bin/clang-format clang-format /usr/bin/c
 
 - nasm
 
+```
 sudo apt-get install -y nasm
+```
 
 - grub
 
@@ -40,13 +42,19 @@ Should come with Ubuntu 14.04.
 
 - xorriso (for grub)
 
+```
 sudo apt-get install -y xorriso
+```
 
 - qemu
 
+```
 sudo apt-get install -y qemu
+```
 
 - bochs
 
+```
 sudo apt-get install -y bochs bochs-sdl
+```
 

@@ -11,6 +11,8 @@
 extern link_text_start ; all defined by linker script of `filename.ld`,
 extern link_data_end
 extern link_bss_end
+extern link_kernel_start
+extern link_kernel_end
 
 ; references to multiboot spec refer to version 1.6:
 ; http://download-mirror.savannah.gnu.org/releases/grub/phcoder/multiboot.pdf
@@ -127,7 +129,16 @@ pm32_putchar:
   mov [ecx], dx
   add ecx, 2
   ret
-
+pm32_putstrln:
+  mov edx, ecx
+  mov ecx, TEXT_SCREEN_ROW
+  imul ecx, [current_line]
+  add ecx, TEXT_SCREEN_MEMORY
+  mov eax, [current_line]
+  inc eax
+  mov [current_line], eax
+  call pm32_putstr
+  ret
 ; print the \0-terminated string given by edx to the screen at position given
 ; by ecx, returning edx pointing to the end of the string and ecx pointing to
 ; the screen at the position after the final character
@@ -301,9 +312,8 @@ start:
   ; check that we got the right magic value, otherwise nobody knows!
   cmp eax, MULTIBOOT_EXPECTED_MAGIC
   je .correct_magic
-  mov ecx, TEXT_SCREEN_MEMORY
-  mov edx, error_wrong_magic_str
-  call pm32_putstr
+  mov ecx, error_wrong_magic_str
+  call pm32_putstrln
   jmp hang
 .correct_magic:
 
@@ -311,11 +321,18 @@ start:
   push eax
   push ebx
 
+  mov ecx, TEXT_SCREEN_MEMORY
+.clearscreen:
+  mov edx, 0
+  call pm32_putchar
+  cmp ecx, TEXT_SCREEN_MEMORY + 80 * 24 * 2
+  jne .clearscreen
+
 %ifdef DEBUG
   ; debug: print hello world string to screen as a sanity check
-  mov ecx, TEXT_SCREEN_MEMORY
-  mov edx, hello_world_str
-  call pm32_putstr
+  ; mov ecx, TEXT_SCREEN_MEMORY
+  mov ecx, hello_world_str
+  call pm32_putstrln
 %endif
 
   ; ensure we can use long mode, and print an error otherwise
@@ -323,27 +340,23 @@ start:
 
 %ifdef DEBUG
   ; debug: tell the user we can use long mode
-  mov ecx, TEXT_SCREEN_MEMORY+TEXT_SCREEN_ROW
-  mov edx, long_mode_supported_str
-  call pm32_putstr
+  mov ecx, long_mode_supported_str
+  call pm32_putstrln
 
   ; debug: print out current eip
-  mov ecx, TEXT_SCREEN_MEMORY+2*TEXT_SCREEN_ROW
-  mov edx, instruction_ptr_str
-  call pm32_putstr
+  mov ecx, instruction_ptr_str
+  call pm32_putstrln
   call pm32_get_eip ; load eip into eax
   mov edx, eax
   call pm32_puthex
 
   ; debug: print address of multiboot information structure
-  mov ecx, TEXT_SCREEN_MEMORY+3*TEXT_SCREEN_ROW
-  mov edx, multiboot_info_ptr_str
-  call pm32_putstr
+  mov ecx, multiboot_info_ptr_str
+  call pm32_putstrln
   pop edx
   push edx
   call pm32_puthex
 
-  mov ecx, TEXT_SCREEN_MEMORY+4*TEXT_SCREEN_ROW
 %endif
 
   ; read and parse multiboot information, looking for modules to jump to
@@ -357,37 +370,32 @@ start:
 
 .parse_multiboot_header:
 
-%ifdef DEBUG
-  mov dl, 't'
-  call pm32_putchar
-%endif
-
   mov eax, [esi] ; type
   mov ebx, [esi+4] ; size
 
-%ifdef DEBUG
-  mov edx, eax
-  call pm32_puthex ; print type of tag
-%endif
-
   cmp eax, 3 ; module tags have type = 3
+
   jne .not_module
 
-%ifdef DEBUG
-  lea edx, [esi+4*4] ; module path (utf-8, \0-terminated string)
-  call pm32_putstr
-  mov dl, '@'
-  call pm32_putchar
-%endif
+  mov edx, [esi + 0 * 4]
+  mov [module.type], edx
+  mov edx, [esi + 1 * 4]
+  mov [module.size], edx
+  mov edx, [esi + 2 * 4]
+  mov [module.mod_start], edx
+  mov edx, [esi + 3 * 4]
+  mov [module.mod_end], edx
+  lea edx, [esi + 4 * 4]
+  mov [module.string], edx
 
   mov edi, [esi+2*4] ; module start, store in edi so we can jump to it
                      ; once we enter 64-bit mode!
-
+  
 %ifdef DEBUG
+  mov ecx, edi_mod_start_str
+  call pm32_putstrln
   mov edx, edi
   call pm32_puthex
-  mov dl, ' '
-  call pm32_putchar
 %endif
 
   jmp .parse_multiboot_header_next
@@ -398,11 +406,6 @@ start:
 
 .parse_multiboot_header_next:
   add esi, ebx
-
-%ifdef DEBUG
-  mov dl, ' '
-  call pm32_putchar
-%endif
 
 .parse_multiboot_header_next2:
   ; increment until we are aligned according to MULTIBOOT_ALIGNMENT,
@@ -417,12 +420,47 @@ start:
   ; check that we found a good start address
   cmp edi, 0
   jne .valid_module_start_addr
-  mov ecx, TEXT_SCREEN_MEMORY+6*TEXT_SCREEN_ROW
-  mov edx, error_no_kernel_module_str
-  call pm32_putstr
+  mov ecx, error_no_kernel_module_str
+  call pm32_putstrln
   jmp hang
 .valid_module_start_addr:
   push edi ; push module start address
+
+  mov ecx, empty_str
+  call pm32_putstrln
+  mov ecx, self_start_str
+  call pm32_putstrln
+  mov edx, link_kernel_start
+  call pm32_puthex
+  mov ecx, self_end_str
+  call pm32_putstrln
+  mov edx, link_kernel_end
+  call pm32_puthex
+
+  mov ecx, empty_str
+  call pm32_putstrln
+  mov ecx, mod_struct_str
+  call pm32_putstrln
+  mov edx, [module.string]
+  call pm32_putstr
+  mov ecx, mod_struct_type_str
+  call pm32_putstrln
+  mov edx, [module.type]
+  call pm32_puthex
+  mov ecx, mod_struct_size_str
+  call pm32_putstrln
+  mov edx, [module.size]
+  call pm32_puthex
+  mov ecx, mod_struct_start_str
+  call pm32_putstrln
+  mov edx, [module.mod_start]
+  call pm32_puthex
+  mov ecx, mod_struct_end_str
+  call pm32_putstrln
+  mov edx, [module.mod_end]
+  call pm32_puthex
+  mov ecx, empty_str
+  call pm32_putstrln
 
   ; set up paging
   ; (see http://wiki.osdev.org/Setting_Up_Long_Mode#Setting_up_the_Paging)
@@ -495,9 +533,8 @@ HIGH_ADDR_OFFSET equ -0x40000000
 
 %ifdef DEBUG
   ; debug: tell the user we've set up paging
-  mov ecx, TEXT_SCREEN_MEMORY+6*TEXT_SCREEN_ROW
-  mov edx, paging_set_up_str
-  call pm32_putstr
+  mov ecx, paging_set_up_str
+  call pm32_putstrln
 %endif
 
   ; So supposedly at this point we are actually in long mode, however
@@ -535,7 +572,16 @@ lm64_putchar:
   mov [rcx], dx
   add rcx, 2
   ret
-
+lm64_putstrln:
+  mov rdx, rcx
+  mov rcx, TEXT_SCREEN_ROW
+  imul rcx, [current_line]
+  add rcx, TEXT_SCREEN_MEMORY
+  mov rax, [current_line]
+  inc rax
+  mov [current_line], rax
+  call lm64_putstr
+  ret
 lm64_putstr:
   cmp byte [rdx], 0
   je .done
@@ -605,8 +651,8 @@ lm64_puthex:
 realm64: ; from here on we are officially (like, actually) in long mode!
 
   ; for higher-half mapping we need slightly more annoying arithmetic.
-  ; we want to map the kernel to -2gb in general, so all existing physical
-  ; addresses can be converted simply by subtracting 2gb = 0x8000 0000
+  ; we want to map the kernel to -1gb so all existing addresses can be
+  ; converted simply by subtracting 1gb = 0x4000 0000 (aka. HIGH_ADDR_OFFSET)
   ; this means we want P4[0x1ff] (the final entry) to point to P3_HIGH
   ; and P3_HIGH[0x1ff] to P2_HIGH. P2_HIGH and P1_HIGH are mapped as in
   ; identity mapping so in fact we don't need to do any extra work and can
@@ -632,21 +678,27 @@ realm64: ; from here on we are officially (like, actually) in long mode!
 %ifdef DEBUG
   ; debug: check that hex printing works for negative numbers
   ; mov rdx, HIGH_ADDR_OFFSET
+  push rax
+  mov rcx, empty_str
+  call lm64_putstrln
+  pop rax
   mov rdx, rax
-  mov ecx, TEXT_SCREEN_MEMORY + 7*TEXT_SCREEN_ROW
   call lm64_puthex
 %endif
 
-  ; unset identity mapping values
 %ifdef DEBUG
-  ; debug: check that hex printing works for negative numbers
-  ; (we expect to see 0xffffffffffffffff)
+  ; debug: check that hex printing works for "negative" numbers (msb set)
+  mov rcx, empty_str
+  call lm64_putstrln
   mov edx, [P4_ADDR + HIGH_ADDR_OFFSET]
-  mov ecx, TEXT_SCREEN_MEMORY + 8*TEXT_SCREEN_ROW
+  ; mov ecx, TEXT_SCREEN_MEMORY + 10*TEXT_SCREEN_ROW
   call lm64_puthex
+  mov rcx, empty_str
+  call lm64_putstrln
   mov edx, P3_IDENT_ADDR
   call lm64_puthex
 %endif
+  ; unset identity mapping values
   mov dword [P4_ADDR + HIGH_ADDR_OFFSET], 0
   mov dword [P3_IDENT_ADDR + HIGH_ADDR_OFFSET], 0
 
@@ -660,9 +712,9 @@ realm64: ; from here on we are officially (like, actually) in long mode!
   add rax, rdx
 
 %ifdef DEBUG
-  mov rcx, TEXT_SCREEN_MEMORY + 9*TEXT_SCREEN_ROW + HIGH_ADDR_OFFSET
-  mov rdx, rcx
-  call lm64_puthex
+  ; mov rcx, TEXT_SCREEN_MEMORY + 11*TEXT_SCREEN_ROW + HIGH_ADDR_OFFSET
+  ; mov rdx, rcx
+  ; call lm64_puthex
 %endif
 
   ; at this point (hopefully)
@@ -695,13 +747,37 @@ instruction_ptr_str: db "Current instruction pointer is ", 0
 multiboot_info_ptr_str: db "Multiboot information structure is at ", 0
 long_mode_supported_str: db "Long mode seems to be supported! :)", 0
 paging_set_up_str: db "Finished setting up 64-bit paging!", 0
-hex_digit_lookup_str: db "0123456789abcdef", 0
+edi_mod_start_str: db "edi (mod_start): ", 0
 %endif
+self_start_str: db "self start = ", 0
+self_end_str: db "self end = ", 0
+mod_struct_str: db "Found module: ", 0
+mod_struct_type_str: db "type = ", 0
+mod_struct_size_str: db "size = ", 0
+mod_struct_start_str: db "mod_start = ", 0
+mod_struct_end_str: db "mod_end = ", 0
+hex_digit_lookup_str: db "0123456789abcdef", 0
 error_wrong_magic_str: db "Error: Incorrect multiboot magic number!", 0
 error_no_cpuid_str: db "Error: The CPUID instruction does not appear to be supported!", 0
 error_no_long_mode_str: db "Error: Long mode does not appear to be supported!", 0
 error_no_kernel_module_str: db "Error: No valid kernel module appears to have been loaded!", 0
+empty_str:
+dq 0
 
+current_line:
+dq 0
+
+module:
+.type:
+dd 0
+.size:
+dd 0
+.mod_start:
+dd 0
+.mod_end:
+dd 0
+.string:
+dd 0
 
 ; global descriptor table
 ; (see http://wiki.osdev.org/Setting_Up_Long_Mode#Entering_the_64-bit_Submode)

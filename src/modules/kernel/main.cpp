@@ -5,6 +5,9 @@
 #include "pic.h"
 #include "terminal.h"
 
+extern "C" void *link_kern_start;
+extern "C" void *link_kern_end;
+
 // entry point of 64-bit kernel proper, as jumped to from entry.s
 extern "C" void kernel_main(const uint32_t multiboot_magic,
                             void *multiboot_data) {
@@ -29,8 +32,8 @@ extern "C" void kernel_main(const uint32_t multiboot_magic,
   uint64_t rip = 0;
   asm volatile("leaq (%%rip), %0" : "=r"(rip));
 
-  terminal_printf("%s: %x\n", "Current instruction pointer is around", rip);
-  terminal_printf("%s: %x\n", "Multiboot data is at", multiboot_data);
+  // terminal_printf("%s: %x\n", "Current instruction pointer is around", rip);
+  // terminal_printf("%s: %x\n", "Multiboot data is at", multiboot_data);
 
   init_interrupt_descriptor_table();
 
@@ -40,14 +43,13 @@ extern "C" void kernel_main(const uint32_t multiboot_magic,
   enable_interrupts();
 
   for (int i = -11; i < 11; ++i) {
-    terminal_printf("%d,", i);
+    // terminal_printf("%d,", i);
   }
+
+  // terminal_printf("\n");
+  // terminal_printf("%s: %x\n", "link_kern_start", &link_kern_start);
+  // terminal_printf("%s: %x\n", "link_kern_end", &link_kern_end);
+
   while (true) {
-    for (int j = 0; j < 10; ++j) {
-      for (int i = 0; i < 2000000; ++i) {
-      }
-      terminal_putchar('.');
-    }
-    terminal_putchar('X');
   }
 }
