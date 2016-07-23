@@ -1,5 +1,6 @@
 #include "common/common.h"
 #include "idt.h"
+#include "registers.h"
 #include "terminal.h"
 
 // these extern directives let us access the addresses of our asm isr
@@ -36,20 +37,6 @@ extern "C" void isr28();
 extern "C" void isr29();
 extern "C" void isr30();
 extern "C" void isr31();
-
-struct PACKED registers_t {
-  uint64_t ds;
-  uint64_t rdi;
-  uint64_t rsi;
-  uint64_t rbp;
-  uint64_t rbx;
-  uint64_t rdx;
-  uint64_t rcx;
-  uint64_t rax;
-  uint64_t int_no;
-  uint64_t err_code;
-  uint64_t rip;
-};
 
 struct PACKED gpf_err_code {
   uint16_t external : 1;
@@ -133,7 +120,7 @@ extern "C" void isr_handler(const registers_t *regs) {
                     gpf_err_ptr->table, gpf_err_ptr->external ? "yes" : "no");
     break;
   default:
-    terminal_printf("\ngot an interrupt\n  int_no=%x, err_no=%x, ip=%x)\n",
+    terminal_printf("\ngot an exception\n  int_no=%x, err_no=%x, ip=%x)\n",
                     regs->int_no, regs->err_code, regs->rip);
   }
 }

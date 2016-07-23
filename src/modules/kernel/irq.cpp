@@ -1,6 +1,8 @@
 #include "irq.h"
 #include "idt.h"
 #include "pic.h"
+#include "registers.h"
+#include "terminal.h"
 
 // allows us to reference our asm irq handlers
 extern "C" void irq0();
@@ -40,4 +42,10 @@ void irq_init() {
   idt_set_handler(PIC1_OFFSET + 13, &irq13);
   idt_set_handler(PIC1_OFFSET + 14, &irq14);
   idt_set_handler(PIC1_OFFSET + 15, &irq15);
+}
+
+extern "C" void irq_handler(const registers_t *regs) {
+  terminal_printf("\ngot an interrupt request\n");
+  terminal_printf("int_no=%x, err_no=%x, ip=%x)\n", regs->int_no,
+                  regs->err_code, regs->rip);
 }
