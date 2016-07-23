@@ -2,6 +2,8 @@
 #include "common/interrupts.h"
 #include "common/multiboot2.h"
 #include "idt.h"
+#include "irq.h"
+#include "isr.h"
 #include "pic.h"
 #include "terminal.h"
 
@@ -13,6 +15,8 @@ extern "C" void kernel_main(const uint32_t multiboot_magic,
                             void *multiboot_data) {
   terminal_init();
   idt_init();
+  isr_init();
+  irq_init();
   pic_init();
 
   terminal_push_cursor_state(79, 24, terminal_colour_t::WHITE,
