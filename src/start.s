@@ -605,8 +605,8 @@ lm64_puthex:
 realm64: ; from here on we are officially (like, actually) in long mode!
 
   ; for higher-half mapping we need slightly more annoying arithmetic.
-  ; we want to map the kernel to -2gb in general, so all existing physical
-  ; addresses can be converted simply by subtracting 2gb = 0x8000 0000
+  ; we want to map the kernel to -1gb so all existing addresses can be
+  ; converted simply by subtracting 1gb = 0x4000 0000 (aka. HIGH_ADDR_OFFSET)
   ; this means we want P4[0x1ff] (the final entry) to point to P3_HIGH
   ; and P3_HIGH[0x1ff] to P2_HIGH. P2_HIGH and P1_HIGH are mapped as in
   ; identity mapping so in fact we don't need to do any extra work and can
@@ -637,16 +637,15 @@ realm64: ; from here on we are officially (like, actually) in long mode!
   call lm64_puthex
 %endif
 
-  ; unset identity mapping values
 %ifdef DEBUG
-  ; debug: check that hex printing works for negative numbers
-  ; (we expect to see 0xffffffffffffffff)
+  ; debug: check that hex printing works for "negative" numbers (msb set)
   mov edx, [P4_ADDR + HIGH_ADDR_OFFSET]
   mov ecx, TEXT_SCREEN_MEMORY + 8*TEXT_SCREEN_ROW
   call lm64_puthex
   mov edx, P3_IDENT_ADDR
   call lm64_puthex
 %endif
+  ; unset identity mapping values
   mov dword [P4_ADDR + HIGH_ADDR_OFFSET], 0
   mov dword [P3_IDENT_ADDR + HIGH_ADDR_OFFSET], 0
 
