@@ -3,9 +3,6 @@
 
 #include <stdint.h>
 
-/* reinitialize the PIC controllers, giving them specified vector offsets
-   rather than 8h and 70h, as configured by default */
-
 #define PIC1 0x20 /* IO base address for master PIC */
 #define PIC2 0xA0 /* IO base address for slave PIC */
 
@@ -63,8 +60,13 @@ void pic_init() {
   out<uint8_t>(PIC2_DATA, a2);
 }
 
+// see http://wiki.osdev.org/8259_PIC#End_of_Interrupt
 void pic_send_eoi(uint8_t irq) {
+
   if (irq >= 8) {
+    // TODO: we do not handle the case of a spurious irq, in which case we must
+    // NOT send an eoi to the slave (but still send one to the master, see
+    // http://wiki.osdev.org/8259_PIC#Handling_Spurious_IRQs
     out<uint8_t>(PIC2_COMMAND, PIC_EOI);
   }
 
