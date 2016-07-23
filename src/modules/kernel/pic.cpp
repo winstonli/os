@@ -14,6 +14,8 @@
 #define PIC2_COMMAND PIC2
 #define PIC2_DATA (PIC2 + 1)
 
+#define PIC_EOI 0x20 /* End-of-interrupt command code */
+
 #define ICW1_ICW4 0x01      /* ICW4 (not) needed */
 #define ICW1_SINGLE 0x02    /* Single (cascade) mode */
 #define ICW1_INTERVAL4 0x04 /* Call address interval 4 (8) */
@@ -59,4 +61,12 @@ void pic_init() {
 
   out<uint8_t>(PIC1_DATA, a1); // restore saved masks.
   out<uint8_t>(PIC2_DATA, a2);
+}
+
+void pic_send_eoi(uint8_t irq) {
+  if (irq >= 8) {
+    out<uint8_t>(PIC2_COMMAND, PIC_EOI);
+  }
+
+  out<uint8_t>(PIC1_COMMAND, PIC_EOI);
 }
