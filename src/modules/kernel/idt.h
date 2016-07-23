@@ -17,6 +17,7 @@ struct PACKED idt_entry_t {
   uint32_t base_high; // the upper 16 bits of the address to jump to.
   uint32_t always_zero2;
 };
+STATIC_ASSERT(sizeof(void *) == sizeof(uint64_t));
 STATIC_ASSERT(sizeof(idt_entry_t) == 16);
 
 // a struct describing a pointer to an array of interrupt handlers.
@@ -28,7 +29,11 @@ struct PACKED idt_ptr_t {
 STATIC_ASSERT(sizeof(idt_ptr_t) == 10);
 
 // this must be called before interrupts have been enabled!
-void init_interrupt_descriptor_table();
+void idt_init();
+
+// registers the specified function as an interrupt handler for interrupt
+// number 'num'
+void idt_set_gate(uint8_t num, void (*base)());
 
 // these extern directives let us access the addresses of our asm isr
 // handlers.

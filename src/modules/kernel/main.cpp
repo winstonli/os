@@ -1,7 +1,7 @@
 #include "common/common.h"
 #include "common/interrupts.h"
 #include "common/multiboot2.h"
-#include "interrupt.h"
+#include "idt.h"
 #include "pic.h"
 #include "terminal.h"
 
@@ -12,6 +12,7 @@ extern "C" void *link_kern_end;
 extern "C" void kernel_main(const uint32_t multiboot_magic,
                             void *multiboot_data) {
   terminal_init();
+  idt_init();
   pic_init();
 
   terminal_push_cursor_state(79, 24, terminal_colour_t::WHITE,
@@ -34,8 +35,6 @@ extern "C" void kernel_main(const uint32_t multiboot_magic,
 
   // terminal_printf("%s: %x\n", "Current instruction pointer is around", rip);
   // terminal_printf("%s: %x\n", "Multiboot data is at", multiboot_data);
-
-  init_interrupt_descriptor_table();
 
   out<uint8_t>(0x21, 0xfd);
   out<uint8_t>(0xa1, 0xff);

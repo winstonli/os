@@ -56,7 +56,7 @@ start: start.ld src/start.o
 	objcopy -O binary $< $@
 
 kernel.elf: module.ld src/modules/kernel/entry.o src/modules/kernel/main.o \
-            src/modules/kernel/terminal.o src/modules/kernel/interrupt.o \
+            src/modules/kernel/terminal.o src/modules/kernel/idt.o \
             src/modules/kernel/interrupt_stubs.o \
             src/modules/kernel/isr_handler.o src/modules/kernel/pic.o \
             $(COMMON_OBJFILES)
