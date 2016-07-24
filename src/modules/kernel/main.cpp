@@ -6,6 +6,7 @@
 #include "isr.h"
 #include "pic.h"
 #include "terminal.h"
+#include <vm/page_table.h>
 
 extern "C" void *link_kern_start;
 extern "C" void *link_kern_end;
@@ -14,10 +15,6 @@ extern "C" void *link_kern_end;
 extern "C" void kernel_main(const uint32_t multiboot_magic,
                             void *multiboot_data) {
   terminal_init();
-  idt_init();
-  isr_init();
-  irq_init();
-  pic_init();
 
   terminal_push_cursor_state(79, 24, terminal_colour_t::WHITE,
                              terminal_colour_t::RED);
@@ -32,8 +29,13 @@ extern "C" void kernel_main(const uint32_t multiboot_magic,
   }
   terminal_pop_cursor_state();
 
-  terminal_push_cursor_state(0, 10, terminal_colour_t::GREEN,
+  terminal_push_cursor_state(0, 19, terminal_colour_t::GREEN,
                              terminal_colour_t::BLACK);
+  page_table::init();
+  idt_init();
+  isr_init();
+  irq_init();
+  pic_init();
   uint64_t rip = 0;
   asm volatile("leaq (%%rip), %0" : "=r"(rip));
 

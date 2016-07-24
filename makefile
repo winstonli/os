@@ -14,7 +14,7 @@ COMMON_FLAGS += -fPIC --target=x86_64-pc-none-elf -ffreestanding -fno-builtin \
                 -Wwrite-strings -Wredundant-decls \
                 -Winline -Wno-long-long -Wuninitialized
 CFLAGS += $(COMMON_FLAGS) -std=c11
-CXXFLAGS += $(COMMON_FLAGS) -std=c++14 -Isrc/
+CXXFLAGS += $(COMMON_FLAGS) -std=c++14 -Isrc/ -I src/modules/kernel
 
 HFILES = $(shell find src/ -type f -name '*.h')
 CFILES = $(shell find src/ -type f -name '*.c')
@@ -59,7 +59,14 @@ kernel.elf: module.ld src/modules/kernel/entry.o src/modules/kernel/main.o \
             src/modules/kernel/terminal.o src/modules/kernel/idt.o \
             src/modules/kernel/interrupt_stubs.o src/modules/kernel/isr.o \
             src/modules/kernel/irq.o src/modules/kernel/pic.o \
-            $(COMMON_OBJFILES)
+            src/modules/kernel/register.o \
+			src/modules/kernel/vm/page_table.o \
+			src/modules/kernel/vm/pml4e.o \
+			src/modules/kernel/vm/pdpe.o \
+			src/modules/kernel/vm/pde.o \
+			src/modules/kernel/vm/pte.o \
+			src/modules/kernel/vm/vm.o \
+			$(COMMON_OBJFILES)
 	$(LD) -T $^ $(LDFLAGS) -o $@
 
 %.o: %.c

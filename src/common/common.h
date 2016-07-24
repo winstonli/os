@@ -16,6 +16,8 @@ T in(uint16_t port);
 // should only be used if there is nothing to spin on to check for completion.
 void io_wait();
 
+#define DATA [[gnu::section(".data")]]
+
 // since we are in a land with no elf-loading we cannot correctly handle bss
 // sections, so move any reserved space into .data to ensure we actually
 // allocate it and mark it as static to ensure no lookup table entries are
