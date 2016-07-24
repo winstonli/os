@@ -50,7 +50,7 @@ void multiboot_info::init(void *multiboot_ptr) {
   uint32_t num_mmap_entries = get_num_mmap_entries(mmap);
   klog_debug("Num mmap entries: %x", num_mmap_entries);
   multiboot_mmap_entry *entries = mmap->entries;
-  for (auto i = 0; i < num_mmap_entries; ++i) {
+  for (uint32_t i = 0; i < num_mmap_entries; ++i) {
     klog_debug("Mmap entry %d/%d", i, num_mmap_entries - 1);
     multiboot_mmap_entry &e = entries[i];
     klog_debug("base_addr = %x", e.addr);

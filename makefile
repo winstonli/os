@@ -1,4 +1,3 @@
-CC := clang
 CXX := clang++
 LD := ld
 AS := nasm
@@ -7,17 +6,22 @@ MODULES := kernel.bin
 COMMON_OBJFILES += src/common/common.o src/common/string.o \
                    src/common/interrupts.o
 
-COMMON_FLAGS += -fPIC --target=x86_64-pc-none-elf -ffreestanding -fno-builtin \
+COMMON_FLAGS += -fPIC -ffreestanding -fno-builtin \
                 -fno-exceptions -fno-rtti \
-                -MMD -mno-sse -mno-mmx -Wall -Wextra \
+                -MMD -mno-sse -mno-mmx -mno-red-zone -Wall -Wextra \
                 -pedantic -Wshadow -Wpointer-arith -Wcast-align \
                 -Wwrite-strings -Wredundant-decls \
-                -Winline -Wno-long-long -Wuninitialized
-CFLAGS += $(COMMON_FLAGS) -std=c11
+                -Winline -Wno-long-long -Wuninitialized \
+                -Wno-unused-private-field -Wno-gnu-zero-variadic-macro-arguments
+
 CXXFLAGS += $(COMMON_FLAGS) -std=c++14 -Isrc/ -I src/modules/kernel
 
+ifneq (,$(findstring clang,$(CXX)))
+# we are using clang, add clang-specific flags
+CXXFLAGS += --target=x86_64-pc-none-elf -Wno-gnu-zero-variadic-macro-arguments
+endif
+
 HFILES = $(shell find src/ -type f -name '*.h')
-CFILES = $(shell find src/ -type f -name '*.c')
 CXXFILES = $(shell find src/ -type f -name '*.cpp')
 DEPFILES = $(CFILES:.c=.d) $(CXXFILES:.cpp=.d)
 
@@ -76,9 +80,6 @@ kernel.elf: module.ld src/modules/kernel/entry.o src/modules/kernel/main.o \
             src/modules/kernel/vm/vm.o \
             $(COMMON_OBJFILES)
 	$(LD) -T $^ $(LDFLAGS) -o $@
-
-%.o: %.c
-	$(CC) $(CFLAGS) -c -o $@ $<
 
 %.o: %.cpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $<

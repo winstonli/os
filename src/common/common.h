@@ -16,12 +16,11 @@ T in(uint16_t port);
 // should only be used if there is nothing to spin on to check for completion.
 void io_wait();
 
-#define DATA [[gnu::section(".data")]]
-
 // since we are in a land with no elf-loading we cannot correctly handle bss
 // sections, so move any reserved space into .data to ensure we actually
 // allocate it and mark it as static to ensure no lookup table entries are
 // generated!
+#define DATA [[gnu::section(".data")]]
 #define STATIC [[gnu::section(".data")]] static
 
 // pack structures to avoid invisible padding
@@ -30,4 +29,5 @@ void io_wait();
 // static assert with no message
 #define STATIC_ASSERT(cond) static_assert(cond, #cond)
 
-#define NORETURN __attribute__((noreturn));
+// specify that a function does not return
+#define NORETURN __attribute__((noreturn))

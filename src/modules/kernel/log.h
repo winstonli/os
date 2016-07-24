@@ -1,5 +1,11 @@
 #pragma once
 
+#if !defined(__clang__) && defined(__GNUG__)
+// stop gcc from issuing warnings about calling variadic functions with zero
+// vararg arguments
+#pragma GCC system_header
+#endif
+
 #include <terminal.h>
 #include <util/string_util.h>
 
