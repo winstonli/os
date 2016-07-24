@@ -185,3 +185,10 @@ void terminal_printf(const char *format, ...) {
 
   va_end(params);
 }
+
+void terminal_clear() {
+  auto &elem = cursor_state_stack[cursor_state_stack_idx];
+  elem.x = 0;
+  elem.y = 0;
+  memzero(TEXT_VIDEO_MEMORY, TEXT_NUM_ROWS * TEXT_NUM_COLS * 2);
+}

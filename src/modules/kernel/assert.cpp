@@ -1,0 +1,9 @@
+#include "assert.h"
+
+#include <halt.h>
+
+void panic() {
+  klog_crit("KERNEL PANIC\n");
+  klog_crit("regs: \n");
+  halt();
+}

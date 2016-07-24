@@ -29,3 +29,5 @@ void io_wait();
 
 // static assert with no message
 #define STATIC_ASSERT(cond) static_assert(cond, #cond)
+
+#define NORETURN __attribute__((noreturn));

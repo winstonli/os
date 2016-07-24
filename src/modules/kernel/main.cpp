@@ -30,11 +30,12 @@ extern "C" void kernel_main(const uint32_t multiboot_magic,
 
   terminal_push_cursor_state(0, 19, terminal_colour_t::GREEN,
                              terminal_colour_t::BLACK);
-  klog("Welcome to os\n");
-  klog_debug("Hello debug\n");
-  klog_info("hello warn\n");
-  klog_err("Hello error\n");
-  klog_crit("Hello crit\n");
+  klog("Welcome to os blah blah blah blah blah blah blah blah "
+       "blahhhhhhh...george you've done this line wrapping beautifully");
+  klog_debug("Hello debug");
+  klog_info("hello warn");
+  klog_err("Hello error");
+  klog_crit("Hello crit");
   multiboot_info::init(multiboot_data);
   page_table::init();
   idt_init();

@@ -44,3 +44,5 @@ void terminal_write(const char *str);
 
 // C-style printf to text console
 void terminal_printf(const char *format, ...);
+
+void terminal_clear();

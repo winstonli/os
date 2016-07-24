@@ -35,5 +35,11 @@
     terminal_printf(" " loglevel " ");                                         \
     terminal_set_colour(terminal_colour_t::LIGHT_GRAY,                         \
                         terminal_colour_t::BLACK);                             \
-    terminal_printf(msg, ##__VA_ARGS__);                                       \
+    terminal_printf(msg "\n", ##__VA_ARGS__);                                  \
   } while (false)
+
+#define klog_clear()                                                           \
+  do {                                                                         \
+    terminal_clear();                                                          \
+  }                                                                            \
+  (false)
