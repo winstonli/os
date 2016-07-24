@@ -3,8 +3,15 @@
 
 #include <stdint.h>
 
-/* reinitialize the PIC controllers, giving them specified vector offsets
-   rather than 8h and 70h, as configured by default */
+#define PIC1 0x20 /* IO base address for master PIC */
+#define PIC2 0xA0 /* IO base address for slave PIC */
+
+#define PIC1_COMMAND PIC1
+#define PIC1_DATA (PIC1 + 1)
+#define PIC2_COMMAND PIC2
+#define PIC2_DATA (PIC2 + 1)
+
+#define PIC_EOI 0x20 /* End-of-interrupt command code */
 
 #define ICW1_ICW4 0x01      /* ICW4 (not) needed */
 #define ICW1_SINGLE 0x02    /* Single (cascade) mode */
@@ -18,8 +25,7 @@
 #define ICW4_BUF_MASTER 0x0C /* Buffered mode/master */
 #define ICW4_SFNM 0x10       /* Special fully nested (not) */
 
-#define PIC1_OFFSET 0x20 // new offset for master (exceptions end at 0x1f)
-#define PIC2_OFFSET 0x28 // new offset for slave
+#define PIC2_OFFSET (PIC1_OFFSET + 0x8) // new offset for slave
 
 // see http://wiki.osdev.org/PIC#Initialisation
 // and http://stackoverflow.com/questions/282983/setting-up-irq-mapping
@@ -52,4 +58,17 @@ void pic_init() {
 
   out<uint8_t>(PIC1_DATA, a1); // restore saved masks.
   out<uint8_t>(PIC2_DATA, a2);
+}
+
+// see http://wiki.osdev.org/8259_PIC#End_of_Interrupt
+void pic_send_eoi(uint8_t irq) {
+
+  if (irq >= 8) {
+    // TODO: we do not handle the case of a spurious irq, in which case we must
+    // NOT send an eoi to the slave (but still send one to the master, see
+    // http://wiki.osdev.org/8259_PIC#Handling_Spurious_IRQs
+    out<uint8_t>(PIC2_COMMAND, PIC_EOI);
+  }
+
+  out<uint8_t>(PIC1_COMMAND, PIC_EOI);
 }

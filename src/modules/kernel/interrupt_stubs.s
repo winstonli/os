@@ -49,8 +49,7 @@ idt_flush:
     mov rdi, rsp ; move pointer to saved registers to rdi (first argument to
                  ; function) so we can easily inspect registers from C++ land.
 
-    ; TODO: change this to %1_handler
-    call isr_handler ; call {isr, irq}_handler
+    call %1_handler ; call {isr, irq}_handler
 
     pop rbx ; reload the original data descriptor
     mov ds, bx
