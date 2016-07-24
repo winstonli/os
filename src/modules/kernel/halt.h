@@ -1,6 +1,3 @@
 #pragma once
 
-extern "C" {
-
-void halt() NORETURN;
-}
+extern "C" void halt() NORETURN;
