@@ -33,7 +33,7 @@ extern "C" void kernel_main(const uint32_t multiboot_magic,
   klog("Welcome to os blah blah blah blah blah blah blah blah "
        "blahhhhhhh...george you've done this line wrapping beautifully");
   klog_debug("Hello debug");
-  klog_info("hello warn");
+  klog_warn("hello warn");
   klog_err("Hello error");
   klog_crit("Hello crit");
   multiboot_info::init(multiboot_data);

@@ -12,13 +12,13 @@
   klog_colour("INFO", terminal_colour_t::WHITE, msg, ##__VA_ARGS__)
 
 #define klog_warn(msg, ...)                                                    \
-  klog_colour("WARN", terminal_colour_t::MAGENTA, msg, ##__VA_ARGS__)
+  klog_colour("WARN", terminal_colour_t::LIGHT_RED, msg, ##__VA_ARGS__)
 
 #define klog_err(msg, ...)                                                     \
   klog_colour("ERROR", terminal_colour_t::RED, msg, ##__VA_ARGS__)
 
 #define klog_crit(msg, ...)                                                    \
-  klog_colour("CRITICAL", terminal_colour_t::BROWN, msg, ##__VA_ARGS__)
+  klog_colour("CRITICAL", terminal_colour_t::BLUE, msg, ##__VA_ARGS__)
 
 #define klog_colour(loglevel, colour, msg, ...)                                \
   do {                                                                         \

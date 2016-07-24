@@ -3,6 +3,6 @@
 #include <halt.h>
 
 void panic() {
-  klog_crit("KERNEL PANIC\n");
+  klog_crit("KERNEL PANIC");
   halt();
 }
