@@ -1,14 +1,5 @@
 #include "vm.h"
 
-void *vm::align_up(void *addr, int64_t pgsz) {
-  uintptr_t iaddr = reinterpret_cast<uintptr_t>(addr);
-  uintptr_t rem = iaddr % pgsz;
-  if (rem == 0) {
-    return addr;
-  }
-  return reinterpret_cast<void *>(iaddr - rem + pgsz);
-}
-
 void *vm::paddr_to_kvaddr(void *paddr) {
   return static_cast<char *>(paddr) + kernel_offset;
 }

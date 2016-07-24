@@ -58,15 +58,19 @@ start: start.ld src/start.o
 kernel.elf: module.ld src/modules/kernel/entry.o src/modules/kernel/main.o \
             src/modules/kernel/terminal.o src/modules/kernel/idt.o \
             src/modules/kernel/interrupt_stubs.o src/modules/kernel/isr.o \
-            src/modules/kernel/irq.o src/modules/kernel/pic.o \
+            src/modules/kernel/irq.o \
+            src/modules/kernel/pic.o \
             src/modules/kernel/register.o \
-			src/modules/kernel/vm/page_table.o \
-			src/modules/kernel/vm/pml4e.o \
-			src/modules/kernel/vm/pdpe.o \
-			src/modules/kernel/vm/pde.o \
-			src/modules/kernel/vm/pte.o \
-			src/modules/kernel/vm/vm.o \
-			$(COMMON_OBJFILES)
+            src/modules/kernel/boot/multiboot_info.o \
+            src/modules/kernel/util/string_util.o \
+            src/modules/kernel/vm/page_table.o \
+            src/modules/kernel/vm/pallocator.o \
+            src/modules/kernel/vm/pml4e.o \
+            src/modules/kernel/vm/pdpe.o \
+            src/modules/kernel/vm/pde.o \
+            src/modules/kernel/vm/pte.o \
+            src/modules/kernel/vm/vm.o \
+            $(COMMON_OBJFILES)
 	$(LD) -T $^ $(LDFLAGS) -o $@
 
 %.o: %.c

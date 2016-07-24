@@ -17,9 +17,17 @@ class vm {
 
   static constexpr uint64_t kernel_offset = 0xffff'ffff'8000'0000;
 
-  static void *align_up(void *addr, int64_t pgsz);
-
 public:
+  template <typename T>
+  static T *align_up(T *addr, int64_t sz) {
+    uintptr_t iaddr = reinterpret_cast<uintptr_t>(addr);
+    uintptr_t rem = iaddr % sz;
+    if (rem == 0) {
+      return addr;
+    }
+    return reinterpret_cast<T *>(iaddr - rem + sz);
+  }
+
   static void *paddr_to_kvaddr(void *paddr);
 
   static void *kvaddr_to_paddr(void *paddr);

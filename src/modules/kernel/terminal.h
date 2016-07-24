@@ -29,6 +29,9 @@ void terminal_init(void);
 void terminal_push_cursor_state(uint8_t x, uint8_t y, terminal_colour_t fg,
                                 terminal_colour_t bg);
 
+// just sets a colour
+void terminal_set_colour(terminal_colour_t fg, terminal_colour_t bg);
+
 // restore a previously held state of the cursor. if the stack is empty,
 // restores to a default state
 void terminal_pop_cursor_state(void);

@@ -35,7 +35,7 @@ class PACKED pml4e {
      false = Page uses writeback caching. (Default)
    */
   bool pwt : 1;
-  /* 
+  /*
      Page-Level Cache Disable (PCD) bit:
      true = Page not cachable.
      false = Page is cachable. (Default)

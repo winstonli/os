@@ -32,6 +32,11 @@ void terminal_push_cursor_state(uint8_t x, uint8_t y, terminal_colour_t fg,
   elem.colour = (static_cast<uint8_t>(bg) << 4) | static_cast<uint8_t>(fg);
 }
 
+void terminal_set_colour(terminal_colour_t fg, terminal_colour_t bg) {
+  auto &elem = cursor_state_stack[cursor_state_stack_idx];
+  elem.colour = (static_cast<uint8_t>(bg) << 4) | static_cast<uint8_t>(fg);
+}
+
 void terminal_pop_cursor_state(void) {
   if (cursor_state_stack_idx == 0) {
     // cannot remove from empty stack, so restore default state
