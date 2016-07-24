@@ -29,6 +29,8 @@ void page_table::init() {
   terminal_printf("link_kern_end: %x\n", &link_kern_end);
   terminal_printf("link_kern_end aligned: %x\n",
                   vm::align_up_2m(&link_kern_end));
+  terminal_printf("link_kern_end p aligned: %x\n",
+                  vm::align_up_2m(vm::kvaddr_to_paddr(&link_kern_end)));
 }
 
 void *page_table::get_entry_paddr(const void *entry_ptr) {
