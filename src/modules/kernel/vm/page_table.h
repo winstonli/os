@@ -2,17 +2,19 @@
 
 #include <common/common.h>
 
-#include <modules/kernel/vm/pml4e.h>
+#include <vm/pml4e.h>
 
 class PACKED page_table {
 
   static constexpr uint64_t base_paddr_mask = 0x000f'ffff'ffff'f000;
 
-  static constexpr int num_pages = 512;
-
-  pml4e e4_arr[num_pages];
-
   static page_table *ptr;
+
+public:
+  static constexpr int num_entries = 512;
+
+private:
+  pml4e e4_arr[num_entries];
 
 public:
   /* The page table is already set up, and cr3 contains its paddr.

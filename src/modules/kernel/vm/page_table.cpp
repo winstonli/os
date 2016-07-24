@@ -16,8 +16,19 @@ void page_table::init() {
   terminal_printf("cr3: %x\n", cr3);
   ptr = static_cast<page_table *>(pt);
   terminal_printf("page_table: %x\n", ptr);
-  terminal_printf("last pml4 entry pdp kvaddr: %x\n",
-                  ptr->e4_arr[511].get_pdp());
+  const auto &last_pml4e = ptr->e4_arr[511];
+  const auto last_pdp = last_pml4e.get_pdp();
+  terminal_printf("last pml4 entry pdp kvaddr: %x\n", last_pdp);
+  const auto pd = last_pdp[510].get_pd();
+  terminal_printf("second last pd: %x\n", pd);
+  terminal_printf("entry: %x\n", *(uint64_t *)pd);
+  // pd->ps = true;
+  terminal_printf("ps: %x\n", !pd->has_pt());
+  terminal_printf("pt: %x\n", pd->get_pt());
+
+  terminal_printf("link_kern_end: %x\n", &link_kern_end);
+  terminal_printf("link_kern_end aligned: %x\n",
+                  vm::align_up_2m(&link_kern_end));
 }
 
 void *page_table::get_entry_paddr(const void *entry_ptr) {
