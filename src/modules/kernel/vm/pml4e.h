@@ -6,8 +6,6 @@
 
 class PACKED pml4e {
 
-  static constexpr uint64_t base_paddr_mask = 0x000f'ffff'ffff'f000;
-
   bool nx : 1;
   uint64_t available : 11;
   uint64_t pdpe_base_paddr : 40;
@@ -25,5 +23,5 @@ class PACKED pml4e {
   void *get_pdpe_base_kvaddr() const;
 
 public:
-  pdpe *get_pdpe_base() const;
+  pdpe *get_pdp() const;
 };

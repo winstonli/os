@@ -1,10 +1,12 @@
 #include "page_table.h"
 
+#include <common/common.h>
+
 #include <register.h>
 #include <terminal.h>
 #include <vm/vm.h>
 
-[[gnu::section(".data")]] page_table *page_table::ptr;
+DATA page_table *page_table::ptr;
 
 void page_table::init() {
   terminal_printf("Initializing real page table\n");
@@ -14,6 +16,15 @@ void page_table::init() {
   terminal_printf("cr3: %x\n", cr3);
   ptr = static_cast<page_table *>(pt);
   terminal_printf("page_table: %x\n", ptr);
-  terminal_printf("last pml4 entry kvaddr: %x\n",
-                  ptr->e4_arr[511].get_pdpe_base());
+  terminal_printf("last pml4 entry pdp kvaddr: %x\n",
+                  ptr->e4_arr[511].get_pdp());
+}
+
+void *page_table::get_entry_paddr(const void *entry_ptr) {
+  return reinterpret_cast<void *>(*static_cast<const uint64_t *>(entry_ptr) &
+                                  base_paddr_mask);
+}
+
+void *page_table::get_entry_kvaddr(const void *entry_ptr) {
+  return vm::paddr_to_kvaddr(get_entry_paddr(entry_ptr));
 }
