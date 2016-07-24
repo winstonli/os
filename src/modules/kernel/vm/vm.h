@@ -4,10 +4,10 @@
 
 class vm {
 
-  static constexpr uint64_t kernel_offset = 0xffff'fff8'0000'0000;
+  static constexpr uint64_t kernel_offset = 0xffff'ffff'8000'0000;
 
 public:
-  static void *paddr_to_kaddr(void *paddr);
+  static void *paddr_to_kvaddr(void *paddr);
 
-  static void *kaddr_to_paddr(void *paddr);
+  static void *kvaddr_to_paddr(void *paddr);
 };

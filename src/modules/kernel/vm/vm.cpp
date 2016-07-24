@@ -1,9 +1,9 @@
 #include "vm.h"
 
-void *vm::paddr_to_kaddr(void *paddr) {
+void *vm::paddr_to_kvaddr(void *paddr) {
   return static_cast<char *>(paddr) + kernel_offset;
 }
 
-void *vm::kaddr_to_paddr(void *kaddr) {
+void *vm::kvaddr_to_paddr(void *kaddr) {
   return static_cast<char *>(kaddr) - kernel_offset;
 }
