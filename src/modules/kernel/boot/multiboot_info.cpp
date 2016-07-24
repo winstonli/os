@@ -27,5 +27,4 @@ void multiboot_info::init(void *multiboot_ptr) {
   ptr = static_cast<multiboot_info *>(multiboot_ptr);
   klog_debug("Multiboot total_size = %x", ptr->total_size);
   klog_debug("Multiboot reserved = %x", ptr->reserved);
-  assertf(false, "hello");
 }

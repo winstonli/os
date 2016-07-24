@@ -4,6 +4,5 @@
 
 void panic() {
   klog_crit("KERNEL PANIC\n");
-  klog_crit("regs: \n");
   halt();
 }

@@ -41,5 +41,4 @@
 #define klog_clear()                                                           \
   do {                                                                         \
     terminal_clear();                                                          \
-  }                                                                            \
-  (false)
+  } while (false)
