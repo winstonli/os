@@ -8,7 +8,7 @@ COMMON_OBJFILES += src/common/common.o src/common/string.o \
 
 COMMON_FLAGS += -fPIC -ffreestanding -fno-builtin \
                 -fno-exceptions -fno-rtti \
-                -MMD -mno-sse -mno-mmx -mno-red-zone -Wall -Wextra \
+                -MMD -mno-sse -mno-mmx -mno-red-zone -Wall -Wextra -Werror \
                 -pedantic -Wshadow -Wpointer-arith -Wcast-align \
                 -Wwrite-strings -Wredundant-decls \
                 -Winline -Wno-long-long -Wuninitialized \

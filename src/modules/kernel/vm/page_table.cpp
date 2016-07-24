@@ -22,7 +22,7 @@ void page_table::init() {
   klog_debug("last pml4 entry pdp kvaddr: %x", last_pdp);
   const auto pd = last_pdp[510].get_pd();
   klog_debug("second last pd: %x", pd);
-  klog_debug("entry: %x", *(uint64_t *)pd);
+  klog_debug("entry: %x", *reinterpret_cast<const uint64_t *>(pd));
   // pd->ps = true;
   klog_debug("ps: %x", !pd->has_pt());
   klog_debug("pt: %x", pd->get_pt());
