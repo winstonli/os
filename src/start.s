@@ -469,24 +469,23 @@ start:
 
   ; our page tables will be located as follows
   ; P4 / PML4T - 0x1000
-  ; P3 / PDPT - 0x2000 (high) and 0x5000 (ident)
+  ; P3 / PDPT - 0x2000 (high) and 0x4000 (ident)
   ; P2 / PDT - 0x3000
-  ; P1 / PT - 0x4000
   ; hopefully these won't clash with grub, which tends to load things
   ; much higher in the memory space
 
 P4_ADDR equ 0x1000
 P3_HIGH_ADDR equ 0x2000
 P2_ADDR equ 0x3000
-P1_ADDR equ 0x4000
-P3_IDENT_ADDR equ 0x5000
+P3_IDENT_ADDR equ 0x4000
 
 PAGE_PRESENT equ 0x1
 PAGE_WRITABLE equ 0x3
+PAGE_PS equ 1 << 7
 
 ; this is the offset that we will add to every absolute memory access
 ; once the higher half addressing is activated (equiv. to 0xffff fffc 0000 0000)
-HIGH_ADDR_OFFSET equ -0x40000000
+HIGH_ADDR_OFFSET equ 0xffffffff80000000
 
   mov edi, P4_ADDR
   mov cr3, edi ; set the location of P4 to 0x1000
@@ -500,18 +499,7 @@ HIGH_ADDR_OFFSET equ -0x40000000
   ; the trailing 3s here indicate that the age is present and r/w
   mov dword [P4_ADDR], P3_IDENT_ADDR | PAGE_WRITABLE | PAGE_PRESENT
   mov dword [P3_IDENT_ADDR], P2_ADDR | PAGE_WRITABLE | PAGE_PRESENT
-  mov dword [P2_ADDR], P1_ADDR | PAGE_WRITABLE | PAGE_PRESENT
-
-  ; finally, identity map all 512 entries of P1 at 0x4000!
-  mov edi, P1_ADDR
-  mov ebx, 0x3 ; start at address 0, with flags as above
-  mov ecx, 512
-
-.set_entry:
-  mov dword [edi], ebx ; actually set the entry
-  add ebx, 0x1000      ; iterate to next address (4kb pages = 0x1000)
-  add edi, 8           ; iterate to next entry in P1 (size of ptr)
-  loop .set_entry      ; decrement and check ecx
+  mov dword [P2_ADDR], PAGE_PS | PAGE_WRITABLE | PAGE_PRESENT
 
   ; now we set up PAE (physical address extension) by setting bit 5
   ; of control register 4
@@ -651,15 +639,16 @@ lm64_puthex:
 realm64: ; from here on we are officially (like, actually) in long mode!
 
   ; for higher-half mapping we need slightly more annoying arithmetic.
-  ; we want to map the kernel to -1gb so all existing addresses can be
-  ; converted simply by subtracting 1gb = 0x4000 0000 (aka. HIGH_ADDR_OFFSET)
+  ; we want to map the kernel to -2GiB so all existing addresses can be
+  ; converted simply by subtracting 2GiB = 0x8000'0000 (aka. HIGH_ADDR_OFFSET)
   ; this means we want P4[0x1ff] (the final entry) to point to P3_HIGH
-  ; and P3_HIGH[0x1ff] to P2_HIGH. P2_HIGH and P1_HIGH are mapped as in
-  ; identity mapping so in fact we don't need to do any extra work and can
-  ; just reuse them (i.e. P2_HIGH = P2_IDENT)!
+  ; and P3_HIGH[0x1fe] to P2_HIGH
   mov qword [P4_ADDR + 0x1ff*8], P3_HIGH_ADDR | PAGE_WRITABLE | PAGE_PRESENT
-  mov qword [P3_HIGH_ADDR + 0x1ff*8], P2_ADDR | PAGE_WRITABLE | PAGE_PRESENT
+  mov qword [P3_HIGH_ADDR + 0x1fe*8], P2_ADDR | PAGE_WRITABLE | PAGE_PRESENT
 
+  ; add HIGH_ADDR_OFFSET to rsp and rip
+  ; we set rip by adding HIGH_ADDR_OFFSET to the below label
+  ; and then jumping to it
   lea rax, [.realm64_high]
   mov rdx, HIGH_ADDR_OFFSET
   add rax, rdx
@@ -677,7 +666,6 @@ realm64: ; from here on we are officially (like, actually) in long mode!
 
 %ifdef DEBUG
   ; debug: check that hex printing works for negative numbers
-  ; mov rdx, HIGH_ADDR_OFFSET
   push rax
   mov rcx, empty_str
   call lm64_putstrln
@@ -691,7 +679,6 @@ realm64: ; from here on we are officially (like, actually) in long mode!
   mov rcx, empty_str
   call lm64_putstrln
   mov edx, [P4_ADDR + HIGH_ADDR_OFFSET]
-  ; mov ecx, TEXT_SCREEN_MEMORY + 10*TEXT_SCREEN_ROW
   call lm64_puthex
   mov rcx, empty_str
   call lm64_putstrln
@@ -710,12 +697,6 @@ realm64: ; from here on we are officially (like, actually) in long mode!
   mov eax, [rsp]
   mov rdx, HIGH_ADDR_OFFSET
   add rax, rdx
-
-%ifdef DEBUG
-  ; mov rcx, TEXT_SCREEN_MEMORY + 11*TEXT_SCREEN_ROW + HIGH_ADDR_OFFSET
-  ; mov rdx, rcx
-  ; call lm64_puthex
-%endif
 
   ; at this point (hopefully)
   ; [rsp+0] = module physical address
