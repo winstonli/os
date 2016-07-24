@@ -26,8 +26,7 @@
                         terminal_colour_t::BLACK);                             \
     terminal_printf("[");                                                      \
     terminal_set_colour(terminal_colour_t::GREEN, terminal_colour_t::BLACK);   \
-    terminal_printf("%s:%d", string_util::trim_after(__FILE__, '/'),           \
-                    __LINE__);                                                 \
+    terminal_printf("%s:%d", string_util::find_last(__FILE__, '/'), __LINE__); \
     terminal_set_colour(terminal_colour_t::LIGHT_GRAY,                         \
                         terminal_colour_t::BLACK);                             \
     terminal_printf("]");                                                      \
