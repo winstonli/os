@@ -4,6 +4,11 @@
 
 #include <vm/pdpe.h>
 
+/*
+
+   Class representing a level 4 page table entry (pml4e).
+
+ */
 class PACKED pml4e {
 
   /*
