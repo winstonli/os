@@ -4,7 +4,7 @@
 
 #include <stdarg.h>
 
-#define TEXT_VIDEO_MEMORY                                                      \
+#define TEXT_VIDEO_MEMORY \
   ((volatile uint16_t *)((int64_t)0xb8000 + 0xffff'ffff'8000'0000))
 #define TEXT_NUM_ROWS 25
 #define TEXT_NUM_COLS 80
@@ -20,7 +20,7 @@ STATIC int cursor_state_stack_idx;
 void terminal_init(void) {
   cursor_state_stack_idx = 0;
   memzero(&cursor_state_stack[0], CURSOR_STATE_STACK_MAX_SIZE);
-  terminal_pop_cursor_state(); // initialise to default state
+  terminal_pop_cursor_state();  // initialise to default state
 }
 
 void terminal_push_cursor_state(uint8_t x, uint8_t y, terminal_colour_t fg,
@@ -42,7 +42,7 @@ void terminal_pop_cursor_state(void) {
     // cannot remove from empty stack, so restore default state
     auto &elem = cursor_state_stack[0];
     elem.x = elem.y = 0;
-    elem.colour = 0x07; // white on black
+    elem.colour = 0x07;  // white on black
   } else {
     --cursor_state_stack_idx;
   }
@@ -67,18 +67,18 @@ void terminal_putchar(char ch) {
   }
   auto where = TEXT_VIDEO_MEMORY + (elem.y * TEXT_NUM_COLS) + elem.x;
   switch (ch) {
-  case '\n':
-    elem.x = 0;
-    ++elem.y;
-    break;
-  default:
-    *where = ch | (elem.colour << 8);
-    // move elem state ready for next character
-    ++elem.x;
-    if (elem.x >= TEXT_NUM_COLS) {
-      ++elem.y;
+    case '\n':
       elem.x = 0;
-    }
+      ++elem.y;
+      break;
+    default:
+      *where = ch | (elem.colour << 8);
+      // move elem state ready for next character
+      ++elem.x;
+      if (elem.x >= TEXT_NUM_COLS) {
+        ++elem.y;
+        elem.x = 0;
+      }
   }
 }
 
@@ -159,27 +159,27 @@ void terminal_printf(const char *format, ...) {
       continue;
     }
     switch (ch) {
-    case 's': {
-      auto arg = va_arg(params, const char *);
-      terminal_write(arg);
-      got_percent = false;
-      break;
-    }
-    case 'x': {
-      auto arg = va_arg(params, uint64_t);
-      terminal_print_hex(arg);
-      got_percent = false;
-      break;
-    }
-    case 'd': {
-      auto arg = va_arg(params, int32_t);
-      terminal_print_dec_signed(arg);
-      got_percent = false;
-      break;
-    }
-    default:
-      terminal_putchar(ch);
-      got_percent = false;
+      case 's': {
+        auto arg = va_arg(params, const char *);
+        terminal_write(arg);
+        got_percent = false;
+        break;
+      }
+      case 'x': {
+        auto arg = va_arg(params, uint64_t);
+        terminal_print_hex(arg);
+        got_percent = false;
+        break;
+      }
+      case 'd': {
+        auto arg = va_arg(params, int32_t);
+        terminal_print_dec_signed(arg);
+        got_percent = false;
+        break;
+      }
+      default:
+        terminal_putchar(ch);
+        got_percent = false;
     }
   }
 

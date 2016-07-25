@@ -1,3 +1,6 @@
+#include <boot/multiboot_info.h>
+#include <log.h>
+#include <vm/page_table.h>
 #include "common/common.h"
 #include "common/interrupts.h"
 #include "common/multiboot2.h"
@@ -6,9 +9,6 @@
 #include "isr.h"
 #include "pic.h"
 #include "terminal.h"
-#include <boot/multiboot_info.h>
-#include <log.h>
-#include <vm/page_table.h>
 
 // entry point of 64-bit kernel proper, as jumped to from entry.s
 extern "C" void kernel_main(const uint32_t multiboot_magic,
@@ -30,8 +30,9 @@ extern "C" void kernel_main(const uint32_t multiboot_magic,
 
   terminal_push_cursor_state(0, 19, terminal_colour_t::GREEN,
                              terminal_colour_t::BLACK);
-  klog("Welcome to os blah blah blah blah blah blah blah blah "
-       "blahhhhhhh...george you've done this line wrapping beautifully");
+  klog(
+      "Welcome to os blah blah blah blah blah blah blah blah "
+      "blahhhhhhh...george you've done this line wrapping beautifully");
   klog_debug("Hello debug");
   klog_warn("hello warn");
   klog_err("Hello error");

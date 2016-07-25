@@ -10,7 +10,6 @@
 
  */
 class PACKED pml4e {
-
   /*
      Present (P) bit:
      true = Page loaded in physical memory. (Default)
@@ -77,6 +76,6 @@ class PACKED pml4e {
    */
   bool nx : 1;
 
-public:
+ public:
   pdpe *get_pdp() const;
 };

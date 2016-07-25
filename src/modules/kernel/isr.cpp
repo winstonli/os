@@ -113,14 +113,14 @@ void isr_init() {
 extern "C" void isr_handler(const registers_t *regs) {
   auto gpf_err_ptr = reinterpret_cast<const gpf_err_code *>(&regs->err_code);
   switch (static_cast<exception_code_t>(regs->int_no)) {
-  case EX_GENERAL_PROTECTION_FAULT:
-    terminal_printf("\ngot a gpf at ip=%x with err_no=%x\n", regs->rip,
-                    regs->err_code);
-    terminal_printf("  (idx=%x, tbl=%x, external=%s)\n", gpf_err_ptr->index,
-                    gpf_err_ptr->table, gpf_err_ptr->external ? "yes" : "no");
-    break;
-  default:
-    terminal_printf("\ngot an exception\n  int_no=%x, err_no=%x, ip=%x)\n",
-                    regs->int_no, regs->err_code, regs->rip);
+    case EX_GENERAL_PROTECTION_FAULT:
+      terminal_printf("\ngot a gpf at ip=%x with err_no=%x\n", regs->rip,
+                      regs->err_code);
+      terminal_printf("  (idx=%x, tbl=%x, external=%s)\n", gpf_err_ptr->index,
+                      gpf_err_ptr->table, gpf_err_ptr->external ? "yes" : "no");
+      break;
+    default:
+      terminal_printf("\ngot an exception\n  int_no=%x, err_no=%x, ip=%x)\n",
+                      regs->int_no, regs->err_code, regs->rip);
   }
 }

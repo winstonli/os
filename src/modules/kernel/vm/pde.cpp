@@ -2,9 +2,7 @@
 
 #include <vm/page_table.h>
 
-bool pde::has_pt() const {
-  return !ps;
-}
+bool pde::has_pt() const { return !ps; }
 
 pte *pde::get_pt() const {
   return static_cast<pte *>(

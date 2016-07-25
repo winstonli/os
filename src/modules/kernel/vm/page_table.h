@@ -5,18 +5,17 @@
 #include <vm/pml4e.h>
 
 class PACKED page_table {
-
   static constexpr uint64_t base_paddr_mask = 0x000f'ffff'ffff'f000;
 
   static page_table *ptr;
 
-public:
+ public:
   static constexpr int num_entries = 512;
 
-private:
+ private:
   pml4e e4_arr[num_entries];
 
-public:
+ public:
   /* The page table is already set up, and cr3 contains its paddr.
      All we want to do is take cr3, translate it to vaddr, and set pt_ptr */
   static void init();

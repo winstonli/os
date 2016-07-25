@@ -52,11 +52,11 @@ extern "C" void irq_handler(const registers_t *regs) {
   auto irq_no = regs->int_no - PIC1_OFFSET;
 
   switch (irq_no) {
-  case 1: { // keyboard input. TODO this should be done elsewhere!
-    // we _must_ read from 0x60, even if we don't care about the result!
-    auto scancode = in<uint8_t>(0x60);
-    terminal_printf("got scancode: %x\n", scancode);
-  }
+    case 1: {  // keyboard input. TODO this should be done elsewhere!
+      // we _must_ read from 0x60, even if we don't care about the result!
+      auto scancode = in<uint8_t>(0x60);
+      terminal_printf("got scancode: %x\n", scancode);
+    }
   }
 
   // tell the pic that we're ready for more interrupts!

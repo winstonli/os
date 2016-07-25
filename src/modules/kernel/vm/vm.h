@@ -8,7 +8,6 @@ extern "C" void *link_kern_start;
 extern "C" void *link_kern_end;
 
 class vm {
-
   static constexpr uint64_t pgsz_4k = 0x1000;
 
   static constexpr uint64_t pgsz_2m = page_table::num_entries * pgsz_4k;
@@ -17,7 +16,7 @@ class vm {
 
   static constexpr uint64_t kernel_offset = 0xffff'ffff'8000'0000;
 
-public:
+ public:
   template <typename T>
   static T *align_up(T *addr, int64_t sz) {
     uintptr_t iaddr = reinterpret_cast<uintptr_t>(addr);

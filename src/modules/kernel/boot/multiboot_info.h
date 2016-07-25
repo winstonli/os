@@ -5,8 +5,7 @@
 #include <common/multiboot2.h>
 
 class PACKED multiboot_info {
-
-public:
+ public:
   static multiboot_info *ptr;
 
   uint32_t total_size;

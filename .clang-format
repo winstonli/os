@@ -1,8 +1,1 @@
-Language: Cpp
-AlignConsecutiveAssignments: false
-AlignConsecutiveDeclarations: false
-AllowShortFunctionsOnASingleLine: false
-AllowShortIfStatementsOnASingleLine: false
-AllowShortLoopsOnASingleLine: false
-AlwaysBreakTemplateDeclarations: true
-NamespaceIndentation: All
+BasedOnStyle: Google

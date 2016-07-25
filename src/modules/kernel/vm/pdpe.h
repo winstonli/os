@@ -10,7 +10,6 @@
 
  */
 class PACKED pdpe {
-
   /*
      Present (P) bit:
      true = Page loaded in physical memory. (Default)
@@ -94,6 +93,6 @@ class PACKED pdpe {
    */
   bool nx : 1;
 
-public:
+ public:
   pde *get_pd() const;
 };

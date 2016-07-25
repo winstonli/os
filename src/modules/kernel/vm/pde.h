@@ -93,7 +93,7 @@ class PACKED pde {
    */
   bool nx : 1;
 
-public:
+ public:
   bool has_pt() const;
   pte *get_pt() const;
 };

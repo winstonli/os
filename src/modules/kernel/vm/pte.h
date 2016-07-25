@@ -8,7 +8,6 @@
 
  */
 class PACKED pte {
-
   /*
      Present (P) bit:
      true = Page loaded in physical memory. (Default)
@@ -81,6 +80,6 @@ class PACKED pte {
    */
   bool nx : 1;
 
-public:
+ public:
   void *get_page_paddr() const;
 };

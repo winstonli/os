@@ -11,19 +11,19 @@
 
 #define klog(msg, ...) klog_info(msg, ##__VA_ARGS__)
 
-#define klog_debug(msg, ...)                                                   \
+#define klog_debug(msg, ...) \
   klog_colour("DEBUG", terminal_colour_t::LIGHT_GREEN, msg, ##__VA_ARGS__)
 
-#define klog_info(msg, ...)                                                    \
+#define klog_info(msg, ...) \
   klog_colour("INFO", terminal_colour_t::WHITE, msg, ##__VA_ARGS__)
 
-#define klog_warn(msg, ...)                                                    \
+#define klog_warn(msg, ...) \
   klog_colour("WARN", terminal_colour_t::LIGHT_RED, msg, ##__VA_ARGS__)
 
-#define klog_err(msg, ...)                                                     \
+#define klog_err(msg, ...) \
   klog_colour("ERROR", terminal_colour_t::RED, msg, ##__VA_ARGS__)
 
-#define klog_crit(msg, ...)                                                    \
+#define klog_crit(msg, ...) \
   klog_colour("CRITICAL", terminal_colour_t::BLUE, msg, ##__VA_ARGS__)
 
 #define klog_colour(loglevel, colour, msg, ...)                                \
@@ -43,7 +43,7 @@
     terminal_printf(msg "\n", ##__VA_ARGS__);                                  \
   } while (false)
 
-#define klog_clear()                                                           \
-  do {                                                                         \
-    terminal_clear();                                                          \
+#define klog_clear()  \
+  do {                \
+    terminal_clear(); \
   } while (false)

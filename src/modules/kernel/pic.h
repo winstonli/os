@@ -6,7 +6,7 @@
 // 0 through 31=0x1f, so we remap the pic (programmable interrupt controller)
 // to issue us exceptions at 0x20 (anything out of the former range should be
 // fine though)
-#define PIC1_OFFSET 0x20 // new offset for master
+#define PIC1_OFFSET 0x20  // new offset for master
 
 // initialise the pic controller, must be called before interrupts are enabled
 void pic_init();

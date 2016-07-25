@@ -25,14 +25,14 @@
 #define ICW4_BUF_MASTER 0x0C /* Buffered mode/master */
 #define ICW4_SFNM 0x10       /* Special fully nested (not) */
 
-#define PIC2_OFFSET (PIC1_OFFSET + 0x8) // new offset for slave
+#define PIC2_OFFSET (PIC1_OFFSET + 0x8)  // new offset for slave
 
 // see http://wiki.osdev.org/PIC#Initialisation
 // and http://stackoverflow.com/questions/282983/setting-up-irq-mapping
 void pic_init() {
   unsigned char a1, a2;
 
-  a1 = in<uint8_t>(PIC1_DATA); // save masks
+  a1 = in<uint8_t>(PIC1_DATA);  // save masks
   a2 = in<uint8_t>(PIC2_DATA);
 
   // starts the initialization sequence (in cascade mode)
@@ -40,9 +40,9 @@ void pic_init() {
   io_wait();
   out<uint8_t>(PIC2_COMMAND, ICW1_INIT + ICW1_ICW4);
   io_wait();
-  out<uint8_t>(PIC1_DATA, PIC1_OFFSET); // ICW2: Master PIC vector offset
+  out<uint8_t>(PIC1_DATA, PIC1_OFFSET);  // ICW2: Master PIC vector offset
   io_wait();
-  out<uint8_t>(PIC2_DATA, PIC2_OFFSET); // ICW2: Slave PIC vector offset
+  out<uint8_t>(PIC2_DATA, PIC2_OFFSET);  // ICW2: Slave PIC vector offset
   io_wait();
   // ICW3: tell Master PIC that there is a slave PIC at IRQ2 (0000 0100)
   out<uint8_t>(PIC1_DATA, 4);
@@ -56,13 +56,12 @@ void pic_init() {
   out<uint8_t>(PIC2_DATA, ICW4_8086);
   io_wait();
 
-  out<uint8_t>(PIC1_DATA, a1); // restore saved masks.
+  out<uint8_t>(PIC1_DATA, a1);  // restore saved masks.
   out<uint8_t>(PIC2_DATA, a2);
 }
 
 // see http://wiki.osdev.org/8259_PIC#End_of_Interrupt
 void pic_send_eoi(uint8_t irq) {
-
   if (irq >= 8) {
     // TODO: we do not handle the case of a spurious irq, in which case we must
     // NOT send an eoi to the slave (but still send one to the master, see
