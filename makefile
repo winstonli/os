@@ -10,7 +10,7 @@ COMMON_FLAGS += -fPIC -ffreestanding -fno-builtin \
                 -fno-exceptions -fno-rtti \
                 -MMD -mno-sse -mno-mmx -mno-red-zone -Wall -Wextra -Werror \
                 -pedantic -Wshadow -Wpointer-arith -Wcast-align \
-                -Wwrite-strings -Wredundant-decls \
+                -Wwrite-strings -Wredundant-decls -Wno-unused-parameter \
                 -Winline -Wno-long-long -Wuninitialized \
                 -Wno-unused-private-field -Wno-gnu-zero-variadic-macro-arguments
 

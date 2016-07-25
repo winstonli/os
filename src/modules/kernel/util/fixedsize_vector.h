@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include <new>
 #include <utility>
 
 template<typename T, std::size_t N>
@@ -54,17 +55,24 @@ public:
 
   T *data() { return reinterpret_cast<T *>(arr.data()); }
 
+  /* 
+     We don't use universal refs here because we want to be specific, and don't
+     want these functions overloading on any old T.
+
+     We use placement new to construct directly into the destination memory.
+   */
+
   void push_back(const T &val) {
-    arr[_size++] = T(val);
+    new (arr + _size++) T(val);
   }
 
   void push_back(T &&val) {
-    arr[_size++] = T(std::move(val));
+    new (arr + _size++) T(std::move(val));
   }
 
   template <class... _Args>
   void emplace_back(_Args&&... __args) {
-    arr[_size++] = T(std::forward<_Args>(__args)...);
+    new (arr + _size++) T(std::forward<_Args>(__args)...);
   }
 
   void pop_back() {
