@@ -11,6 +11,39 @@ class fixedsize_vector {
 
 public:
 
+  fixedsize_vector() : arr(), _size(0) {}
+
+  fixedsize_vector(
+      const fixedsize_vector &other
+  ) : arr(),
+      _size(other._size) {
+    copy_elems(other);
+  }
+
+  fixedsize_vector &operator=(const fixedsize_vector &other) {
+    _size = other._size;
+    copy_elems(other);
+  }
+
+  fixedsize_vector(
+      fixedsize_vector &&other
+  ) : arr(),
+      _size(other._size) {
+    move_elems(other);
+  }
+
+  fixedsize_vector &operator=(fixedsize_vector &&other) {
+    _size = other._size;
+    move_elems(other);
+  }
+
+  ~fixedsize_vector() {
+    T *elems = data();
+    for (auto i = 0; i < _size; ++i) {
+      elems[i].~T();
+    }
+  }
+
   T &operator[](size_t i) { return data()[i]; }
 
   const T &operator[](size_t i) const { return data()[i]; }
@@ -36,6 +69,24 @@ public:
 
   void pop_back() {
     arr[_size--].~T();
+  }
+
+private:
+
+  void copy_elems(const fixedsize_vector &other) {
+    T *d = data();
+    const T *other_d = other.data();
+    for (auto i = 0; i < _size; ++i) {
+      d[i] = other_d[i];
+    }
+  }
+
+  void move_elems(fixedsize_vector &&other) {
+    T *d = data();
+    const T *other_d = other.data();
+    for (auto i = 0; i < _size; ++i) {
+      d[i] = std::move(other_d[i]);
+    }
   }
 
 };
