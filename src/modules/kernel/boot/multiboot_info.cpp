@@ -1,5 +1,7 @@
 #include "multiboot_info.h"
 
+#include <array>
+
 #include <common/common.h>
 
 #include <assert.h>

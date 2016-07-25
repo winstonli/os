@@ -25,7 +25,7 @@ ifneq (,$(findstring clang,$(CXX)))
 CXXFLAGS += --target=x86_64-pc-none-elf -Wno-gnu-zero-variadic-macro-arguments
 endif
 
-HFILES = $(shell find src/ -type f -name '*.h')
+HFILES = $(shell echo $(find src/ -type f -name '*.h') $(find src/include))
 CXXFILES = $(shell find src/ -type f -name '*.cpp')
 DEPFILES = $(CFILES:.c=.d) $(CXXFILES:.cpp=.d)
 
