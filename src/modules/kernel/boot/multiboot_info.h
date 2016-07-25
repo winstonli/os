@@ -5,6 +5,7 @@
 
 #include <common/multiboot2.h>
 
+#include <assert.h>
 #include <log.h>
 #include <util/fixedsize_vector.h>
 
@@ -23,10 +24,8 @@ class PACKED multiboot_info {
   template<size_t VecSz>
   static void get_memory_map(
       multiboot_info *multiboot,
-      fixedsize_vector<multiboot_tag_mmap, VecSz> &v
+      fixedsize_vector<multiboot_mmap_entry, VecSz> &v
   ) {
-    void *asdf;
-    new (asdf) multiboot_info;
     klog_debug("Multiboot total_size = %x", ptr->total_size);
     klog_debug("Multiboot reserved = %x", ptr->reserved);
     multiboot_tag_basic_meminfo *meminfo = ptr->get_meminfo();
@@ -44,10 +43,16 @@ class PACKED multiboot_info {
     multiboot_mmap_entry *entries = mmap->entries;
     for (uint32_t i = 0; i < num_mmap_entries; ++i) {
       klog_debug("Mmap entry %d/%d", i, num_mmap_entries - 1);
-      multiboot_mmap_entry &e = entries[i];
+      const multiboot_mmap_entry &e = entries[i];
       klog_debug("base_addr = %x", e.addr);
       klog_debug("length = %x", e.len);
+      v.push_back(e);
     }
+    for (auto i = 0u; i < v.size(); ++i) {
+      klog_debug("base in vec = %x", v[i].addr);
+      klog_debug("length in vec = %x", v[i].len);
+    }
+    panic();
   }
 
   static uint32_t get_num_mmap_entries(multiboot_tag_mmap *mmap);

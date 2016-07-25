@@ -2,6 +2,8 @@
 
 #include <type_traits>
 
+#include <stddef.h>
+
 // zero out the given array of elements
 template <typename T>
 auto memzero(T *elems, int num_elems) -> std::enable_if_t<!std::is_volatile_v<T>> {
@@ -35,3 +37,11 @@ void memcpy(char *dst, char *src, int num_elems);
 
 template <>
 void memcpy(volatile char *dst, volatile char *src, int num_elems);
+
+/* Functions required by the C++ compiler */
+
+extern "C" {
+
+void *memset(void *b, int c, size_t len);
+
+}

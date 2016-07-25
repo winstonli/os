@@ -40,7 +40,7 @@ public:
 
   ~fixedsize_vector() {
     T *elems = data();
-    for (auto i = 0; i < _size; ++i) {
+    for (auto i = 0u; i < _size; ++i) {
       elems[i].~T();
     }
   }
@@ -63,20 +63,20 @@ public:
    */
 
   void push_back(const T &val) {
-    new (arr + _size++) T(val);
+    new (data() + _size++) T(val);
   }
 
   void push_back(T &&val) {
-    new (arr + _size++) T(std::move(val));
+    new (data() + _size++) T(std::move(val));
   }
 
   template <class... _Args>
   void emplace_back(_Args&&... __args) {
-    new (arr + _size++) T(std::forward<_Args>(__args)...);
+    new (data() + _size++) T(std::forward<_Args>(__args)...);
   }
 
   void pop_back() {
-    arr[_size--].~T();
+    data()[_size--].~T();
   }
 
 private:

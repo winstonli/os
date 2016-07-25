@@ -45,3 +45,14 @@ void memcpy(volatile char *dst, volatile char *src, int num_elems) {
     }
   }
 }
+
+extern "C" {
+
+void *memset(void *b, int c, size_t len) {
+  char *dest = static_cast<char *>(b);
+  for (auto i = 0u; i < len; ++i) {
+    dest[i] = static_cast<unsigned char>(c);
+  }
+  return b;
+}
+}
