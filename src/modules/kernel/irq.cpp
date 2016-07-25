@@ -1,4 +1,6 @@
 #include "irq.h"
+#include "assert.h"
+#include "common/string.h"
 #include "idt.h"
 #include "pic.h"
 #include "registers.h"
@@ -22,6 +24,9 @@ extern "C" void irq13();
 extern "C" void irq14();
 extern "C" void irq15();
 
+#define HANDLERS_COUNT 16
+STATIC void (*handlers[HANDLERS_COUNT])(const registers_t *);
+
 void irq_init() {
   // must be called after idt_init and before sti
   // additionally, pic_init must be called before sti
@@ -42,20 +47,30 @@ void irq_init() {
   idt_set_handler(PIC1_OFFSET + 13, &irq13);
   idt_set_handler(PIC1_OFFSET + 14, &irq14);
   idt_set_handler(PIC1_OFFSET + 15, &irq15);
+
+  memzero(&handlers[0], HANDLERS_COUNT);
+}
+
+void irq_register_handler(uint8_t irq, void (*handler)(const registers_t *)) {
+  assert(irq < HANDLERS_COUNT);
+  handlers[irq] = handler;
 }
 
 extern "C" void irq_handler(const registers_t *regs) {
-  terminal_printf("\ngot an interrupt request\n");
-  terminal_printf("int_no=%x, err_no=%x, ip=%x)\n", regs->int_no,
-                  regs->err_code, regs->rip);
-
   auto irq_no = regs->int_no - PIC1_OFFSET;
+  if (handlers[irq_no]) {
+    handlers[irq_no](regs);
+  } else {
+    terminal_printf("\ngot a unhandled interrupt request\n");
+    terminal_printf("int_no=%x, err_no=%x, ip=%x)\n", regs->int_no,
+                    regs->err_code, regs->rip);
 
-  switch (irq_no) {
-    case 1: {  // keyboard input. TODO this should be done elsewhere!
-      // we _must_ read from 0x60, even if we don't care about the result!
-      auto scancode = in<uint8_t>(0x60);
-      terminal_printf("got scancode: %x\n", scancode);
+    switch (irq_no) {
+      case 1: {  // keyboard input. TODO this should be done elsewhere!
+        // we _must_ read from 0x60, even if we don't care about the result!
+        auto scancode = in<uint8_t>(0x60);
+        terminal_printf("got scancode: %x\n", scancode);
+      }
     }
   }
 

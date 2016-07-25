@@ -8,6 +8,7 @@
 #include "irq.h"
 #include "isr.h"
 #include "pic.h"
+#include "pit.h"
 #include "terminal.h"
 
 // entry point of 64-bit kernel proper, as jumped to from entry.s
@@ -42,15 +43,13 @@ extern "C" void kernel_main(const uint32_t multiboot_magic,
   idt_init();
   isr_init();
   irq_init();
+  pit_init();
   pic_init();
   uint64_t rip = 0;
   asm volatile("leaq (%%rip), %0" : "=r"(rip));
 
   // terminal_printf("%s: %x\n", "Current instruction pointer is around", rip);
   // terminal_printf("%s: %x\n", "Multiboot data is at", multiboot_data);
-
-  out<uint8_t>(0x21, 0xfd);
-  out<uint8_t>(0xa1, 0xff);
 
   enable_interrupts();
 

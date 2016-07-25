@@ -31,3 +31,6 @@ void io_wait();
 
 // specify that a function does not return
 #define NORETURN __attribute__((noreturn))
+
+// for unused paramters
+#define UNUSED __attribute__((unused))
