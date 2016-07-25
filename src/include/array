@@ -1,0 +1,41 @@
+#pragma once
+
+#include <cstddef>
+
+namespace std {
+
+template <typename T, size_t N>
+class array {
+
+  T elems[N];
+
+ public:
+
+  T &operator[](size_t i) { return elems[i]; }
+
+  const T &operator[](size_t i) const { return elems[i]; }
+
+  static size_t size() { return N; }
+
+  const T *data() const { return elems; }
+
+  T *data() { return elems; }
+
+};
+
+template <typename T>
+class array<T, 0> {
+
+  char c; /* so begin() and end() return unique values */
+
+ public:
+
+  size_t size() { return 0; }
+
+  const T *data() const { return nullptr; }
+
+  T *data() { return nullptr; }
+
+};
+
+}
