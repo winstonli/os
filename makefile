@@ -14,7 +14,11 @@ COMMON_FLAGS += -fPIC -ffreestanding -fno-builtin \
                 -Winline -Wno-long-long -Wuninitialized \
                 -Wno-unused-private-field -Wno-gnu-zero-variadic-macro-arguments
 
-CXXFLAGS += $(COMMON_FLAGS) -std=c++14 -Isrc/ -I src/modules/kernel
+CXXFLAGS += $(COMMON_FLAGS) \
+            -std=c++14 \
+            -I src/ \
+            -I src/modules/kernel \
+            -I src/include
 
 ifneq (,$(findstring clang,$(CXX)))
 # we are using clang, add clang-specific flags
