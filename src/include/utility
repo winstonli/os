@@ -5,29 +5,15 @@
 namespace std {
 
 template <class _Tp>
-inline constexpr typename remove_reference<_Tp>::type&& move(
-    _Tp&& __t
-) noexcept {
-    typedef typename remove_reference<_Tp>::type _Up;
-    return static_cast<_Up&&>(__t);
-}
-
-template <class _Tp>
-inline constexpr _Tp&& forward(
-    typename remove_reference<_Tp>::type& __t
-) noexcept {
-    return static_cast<_Tp&&>(__t);
-}
-
-template <class _Tp>
-inline constexpr _Tp&& forward(
-    typename remove_reference<_Tp>::type&& __t
-) noexcept {
-    static_assert(
-        !is_lvalue_reference<_Tp>::value,
-        "Can not forward an rvalue as an lvalue."
-    );
-    return static_cast<_Tp&&>(__t);
+void swap(
+    _Tp& __x,
+    _Tp& __y) noexcept(
+        is_nothrow_move_constructible<_Tp>::value &&
+        is_nothrow_move_assignable<_Tp>::value
+    ) {
+    _Tp __t(move(__x));
+    __x = move(__y);
+    __y = move(__t);
 }
 
 }

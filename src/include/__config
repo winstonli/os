@@ -1,0 +1,4 @@
+#pragma once
+
+#  define _ALIGNAS_TYPE(x) alignas(x)
+#  define _ALIGNAS(x) alignas(x)

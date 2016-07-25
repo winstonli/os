@@ -30,11 +30,12 @@ public:
       fixedsize_vector &&other
   ) : arr(),
       _size(other._size) {
+    other._size = 0;
     move_elems(other);
   }
 
   fixedsize_vector &operator=(fixedsize_vector &&other) {
-    _size = other._size;
+    std::swap(_size, other._size);
     move_elems(other);
   }
 
@@ -93,7 +94,7 @@ private:
     T *d = data();
     const T *other_d = other.data();
     for (auto i = 0; i < _size; ++i) {
-      d[i] = std::move(other_d[i]);
+      std::swap(d[i], other_d[i]);
     }
   }
 

@@ -4,6 +4,7 @@
 
 namespace std {
 
+typedef decltype(nullptr) nullptr_t;
 typedef size_t size_t;
 
 }
