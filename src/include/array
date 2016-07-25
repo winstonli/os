@@ -15,7 +15,7 @@ class array {
 
   const T &operator[](size_t i) const { return elems[i]; }
 
-  static size_t size() { return N; }
+  size_t size() { return N; }
 
   const T *data() const { return elems; }
 
@@ -24,18 +24,6 @@ class array {
 };
 
 template <typename T>
-class array<T, 0> {
-
-  char c; /* so begin() and end() return unique values */
-
- public:
-
-  size_t size() { return 0; }
-
-  const T *data() const { return nullptr; }
-
-  T *data() { return nullptr; }
-
-};
+class array<T, 0>;
 
 }
