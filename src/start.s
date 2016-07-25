@@ -112,7 +112,7 @@ section .text
 
 TEXT_SCREEN_MEMORY equ 0xb8000 ; address of the text screen video memory
                                ; (80x25 w/ one byte each for colour and ascii)
-TEXT_SCREEN_ROW equ 80*2 ; 80 characters wide, 2 bytes per character
+TEXT_SCREEN_ROW equ 80 * 2 ; 80 characters wide, 2 bytes per character
 TEXT_WHITE_ON_BLACK equ 0x07
 
 ; note on calling conventions:
@@ -288,7 +288,8 @@ pm32_check_long_mode_supported:
 
 ; TODO: we should really have some kind of guard to ensure this does not
 ; accidentally overflow into somewhere important!
-STACK_SIZE equ 0x4000
+; We have 3 page tables (1 KiB each) at the top of the stack
+STACK_SIZE equ 0x80000 - 3 * 0x1000
 
 ; the value of eax when we get control of the machine from grub (see 3.3)
 MULTIBOOT_EXPECTED_MAGIC equ 0x36d76289
@@ -297,7 +298,7 @@ MULTIBOOT_EXPECTED_MAGIC equ 0x36d76289
 ;; ENTRY POINT ;;
 ;;;;;;;;;;;;;;;;;
 start:
-  mov esp, stack+STACK_SIZE ; setup stack
+  mov esp, stack + STACK_SIZE ; setup stack
 
   ; state of the machine at this point: (see section 3.3 for more details)
   ; eax contains multiboot magic value (MULTIBOOT_EXPECTED_MAGIC)
@@ -364,14 +365,14 @@ start:
   ; specifically we are interested in modules as described by 3.4.6)
   pop edx ; multiboot information
   push edx
-  lea esi, [edx+8] ; start of multiboot information tags
+  lea esi, [edx + 8] ; start of multiboot information tags
   xor edi, edi ; zero out module start address so we can check we actually
                ; found one later!
 
 .parse_multiboot_header:
 
   mov eax, [esi] ; type
-  mov ebx, [esi+4] ; size
+  mov ebx, [esi + 4] ; size
 
   cmp eax, 3 ; module tags have type = 3
 
@@ -474,32 +475,50 @@ start:
   ; hopefully these won't clash with grub, which tends to load things
   ; much higher in the memory space
 
-P4_ADDR equ 0x1000
-P3_HIGH_ADDR equ 0x2000
-P2_ADDR equ 0x3000
-P3_IDENT_ADDR equ 0x4000
-
 PAGE_PRESENT equ 0x1
 PAGE_WRITABLE equ 0x3
 PAGE_PS equ 1 << 7
 
 ; this is the offset that we will add to every absolute memory access
-; once the higher half addressing is activated (equiv. to 0xffff fffc 0000 0000)
+; once the higher half addressing is activated (equiv. to -2 GiB unsigned)
 HIGH_ADDR_OFFSET equ 0xffffffff80000000
 
-  mov edi, P4_ADDR
-  mov cr3, edi ; set the location of P4 to 0x1000
+  mov edi, page_table.l4
+  mov cr3, edi ; c3 takes the physical base of the PML4
 
-  xor eax, eax
-  mov ecx, 0x8000
-  rep stosb ; zero the first 0x8000 bytes of memory (inc. 0x1000 to 0x7000,
-            ; to clear all the page tables)
+  mov ecx, empty_str
+  call pm32_putstrln
+  mov edx, page_table.l4
+  call pm32_puthex
 
+  mov ecx, empty_str
+  call pm32_putstrln
+  mov edx, stack
+  call pm32_puthex
+
+  mov ecx, empty_str
+  call pm32_putstrln
+  mov edx, page_table.l2
+  call pm32_puthex
+
+  ; Set up an identity mapping, so that later we can set up the real mapping
+  ; (with the identity mapping still existing) so that we can swap the rip and
+  ; rsp into the real mapping without everything exploding.
   ; map 0th entry of each of the page tables to the next table in the chain
-  ; the trailing 3s here indicate that the age is present and r/w
-  mov dword [P4_ADDR], P3_IDENT_ADDR | PAGE_WRITABLE | PAGE_PRESENT
-  mov dword [P3_IDENT_ADDR], P2_ADDR | PAGE_WRITABLE | PAGE_PRESENT
-  mov dword [P2_ADDR], PAGE_PS | PAGE_WRITABLE | PAGE_PRESENT
+  ; bits set: present and r/w
+  ; level 2 entry has the Page Size (PS) bit set, meaning it's a flat 2 MiB
+  ; We place the level 3 table at the bottom of the stack. This is the table
+  ; that indexes the bits responsible for giving us an identity mapping
+  ; It's the only table we have to change to get our -2 GiB mapping
+  mov edi, stack
+  or edi, PAGE_WRITABLE | PAGE_PRESENT
+  mov dword [page_table.l4], edi
+
+  mov edi, page_table.l2
+  or edi, PAGE_WRITABLE | PAGE_PRESENT
+  mov dword [stack], edi
+
+  mov dword [page_table.l2], PAGE_PS | PAGE_WRITABLE | PAGE_PRESENT
 
   ; now we set up PAE (physical address extension) by setting bit 5
   ; of control register 4
@@ -643,8 +662,13 @@ realm64: ; from here on we are officially (like, actually) in long mode!
   ; converted simply by subtracting 2GiB = 0x8000'0000 (aka. HIGH_ADDR_OFFSET)
   ; this means we want P4[0x1ff] (the final entry) to point to P3_HIGH
   ; and P3_HIGH[0x1fe] to P2_HIGH
-  mov qword [P4_ADDR + 0x1ff*8], P3_HIGH_ADDR | PAGE_WRITABLE | PAGE_PRESENT
-  mov qword [P3_HIGH_ADDR + 0x1fe*8], P2_ADDR | PAGE_WRITABLE | PAGE_PRESENT
+  mov rdi, page_table.l3
+  or rdi, PAGE_WRITABLE | PAGE_PRESENT
+  mov qword [page_table.l4 + 8 * 0x1ff], rdi
+
+  mov rdi, page_table.l2
+  or rdi, PAGE_WRITABLE | PAGE_PRESENT
+  mov qword [page_table.l3 + 8 * 0x1fe], rdi
 
   ; add HIGH_ADDR_OFFSET to rsp and rip
   ; we set rip by adding HIGH_ADDR_OFFSET to the below label
@@ -678,16 +702,17 @@ realm64: ; from here on we are officially (like, actually) in long mode!
   ; debug: check that hex printing works for "negative" numbers (msb set)
   mov rcx, empty_str
   call lm64_putstrln
-  mov edx, [P4_ADDR + HIGH_ADDR_OFFSET]
+  mov rdx, 0x8000000000000000
   call lm64_puthex
   mov rcx, empty_str
   call lm64_putstrln
-  mov edx, P3_IDENT_ADDR
+  mov rdx, page_table.l3
   call lm64_puthex
 %endif
   ; unset identity mapping values
-  mov dword [P4_ADDR + HIGH_ADDR_OFFSET], 0
-  mov dword [P3_IDENT_ADDR + HIGH_ADDR_OFFSET], 0
+  mov rdi, page_table.l4
+  add rdi, HIGH_ADDR_OFFSET
+  mov dword [rdi], 0
 
   invlpg [TEXT_SCREEN_MEMORY] ; invalidate something in the old address range
 
@@ -723,42 +748,60 @@ realm64: ; from here on we are officially (like, actually) in long mode!
 
 section .data
 %ifdef DEBUG
-hello_world_str: db "Hello World!", 0
-instruction_ptr_str: db "Current instruction pointer is ", 0
-multiboot_info_ptr_str: db "Multiboot information structure is at ", 0
-long_mode_supported_str: db "Long mode seems to be supported! :)", 0
-paging_set_up_str: db "Finished setting up 64-bit paging!", 0
-edi_mod_start_str: db "edi (mod_start): ", 0
+hello_world_str:
+  db "Hello World!", 0
+instruction_ptr_str:
+  db "Current instruction pointer is ", 0
+multiboot_info_ptr_str:
+  db "Multiboot information structure is at ", 0
+long_mode_supported_str:
+  db "Long mode seems to be supported! :)", 0
+paging_set_up_str:
+  db "Finished setting up 64-bit paging!", 0
+edi_mod_start_str:
+  db "edi (mod_start): ", 0
 %endif
-self_start_str: db "self start = ", 0
-self_end_str: db "self end = ", 0
-mod_struct_str: db "Found module: ", 0
-mod_struct_type_str: db "type = ", 0
-mod_struct_size_str: db "size = ", 0
-mod_struct_start_str: db "mod_start = ", 0
-mod_struct_end_str: db "mod_end = ", 0
-hex_digit_lookup_str: db "0123456789abcdef", 0
-error_wrong_magic_str: db "Error: Incorrect multiboot magic number!", 0
-error_no_cpuid_str: db "Error: The CPUID instruction does not appear to be supported!", 0
-error_no_long_mode_str: db "Error: Long mode does not appear to be supported!", 0
-error_no_kernel_module_str: db "Error: No valid kernel module appears to have been loaded!", 0
+self_start_str:
+  db "self start = ", 0
+self_end_str:
+  db "self end = ", 0
+mod_struct_str:
+  db "Found module: ", 0
+mod_struct_type_str:
+  db "type = ", 0
+mod_struct_size_str:
+  db "size = ", 0
+mod_struct_start_str:
+  db "mod_start = ", 0
+mod_struct_end_str:
+  db "mod_end = ", 0
+hex_digit_lookup_str:
+  db "0123456789abcdef", 0
+error_wrong_magic_str:
+  db "Error: Incorrect multiboot magic number!", 0
+error_no_cpuid_str:
+  db "Error: The CPUID instruction does not appear to be supported!", 0
+error_no_long_mode_str:
+  db "Error: Long mode does not appear to be supported!", 0
+error_no_kernel_module_str:
+  db "Error: No valid kernel module appears to have been loaded!", 0
 empty_str:
-dq 0
+  dq 0
 
 current_line:
-dq 0
+  dq 0
 
 module:
 .type:
-dd 0
+  dd 0
 .size:
-dd 0
+  dd 0
 .mod_start:
-dd 0
+  dd 0
 .mod_end:
-dd 0
+  dd 0
 .string:
-dd 0
+  dd 0
 
 ; global descriptor table
 ; (see http://wiki.osdev.org/Setting_Up_Long_Mode#Entering_the_64-bit_Submode)
@@ -798,5 +841,23 @@ gdt64:                ; global descriptor table (64-bit).
 ; multiboot header, grub should reserve us space for it despite it not actually
 ; being in the file at all
 section .bss
+
+; page table space
+; this is so we don't have to guess where we're allowed to put it
+; each level of page table is 4 KiB (0x1000 B)
+
+; page tables must be page aligned. Let's align all 4 2 MiB pages of the stack,
+; minus 3 4 KiB chunks for the page tables
+
+align 0x20000
+
 ; reserve us some stack space
-stack: resb STACK_SIZE
+stack:
+  resb STACK_SIZE
+page_table:
+.l2:
+  resb 0x1000
+.l3:
+  resb 0x1000
+.l4:
+  resb 0x1000
