@@ -285,11 +285,46 @@ pm32_check_long_mode_supported:
   call pm32_putstr
   jmp hang
 
+pm32_max:
+  cmp ecx, edx
+  jl .lt
+  mov eax, ecx
+  ret
+.lt:
+  mov eax, edx
+  ret
+
+; e.g. 9 % 5 = 4
+; ecx = 5
+; edx = 9
+; eax = 4 (result)
+pm32_mod:
+  mov eax, edx
+  xor edx, edx
+  div ecx
+  mov eax, edx
+  ret
+
+; edx = addr
+; ecx = sz
+pm32_align_up:
+  mov esi, ecx
+  mov edi, edx
+  call pm32_mod
+  cmp eax, 0
+  jz .aligned
+  sub edi, eax
+  add edi, esi
+  mov eax, edi
+  ret
+.aligned:
+  mov eax, edi
+  ret
 
 ; TODO: we should really have some kind of guard to ensure this does not
 ; accidentally overflow into somewhere important!
 ; We have 3 page tables (1 KiB each) at the top of the stack
-STACK_SIZE equ 0x80000 - 3 * 0x1000
+STACK_SIZE equ 0x1600000
 
 ; the value of eax when we get control of the machine from grub (see 3.3)
 MULTIBOOT_EXPECTED_MAGIC equ 0x36d76289
@@ -483,24 +518,6 @@ PAGE_PS equ 1 << 7
 ; once the higher half addressing is activated (equiv. to -2 GiB unsigned)
 HIGH_ADDR_OFFSET equ 0xffffffff80000000
 
-  mov edi, page_table.l4
-  mov cr3, edi ; c3 takes the physical base of the PML4
-
-  mov ecx, empty_str
-  call pm32_putstrln
-  mov edx, page_table.l4
-  call pm32_puthex
-
-  mov ecx, empty_str
-  call pm32_putstrln
-  mov edx, stack
-  call pm32_puthex
-
-  mov ecx, empty_str
-  call pm32_putstrln
-  mov edx, page_table.l2
-  call pm32_puthex
-
   ; Set up an identity mapping, so that later we can set up the real mapping
   ; (with the identity mapping still existing) so that we can swap the rip and
   ; rsp into the real mapping without everything exploding.
@@ -510,15 +527,30 @@ HIGH_ADDR_OFFSET equ 0xffffffff80000000
   ; We place the level 3 table at the bottom of the stack. This is the table
   ; that indexes the bits responsible for giving us an identity mapping
   ; It's the only table we have to change to get our -2 GiB mapping
-  mov edi, stack
+
+  mov edi, page_table.l4
+  mov cr3, edi ; c3 takes the physical base of the PML4
+
+  mov edi, page_table.l3
   or edi, PAGE_WRITABLE | PAGE_PRESENT
   mov dword [page_table.l4], edi
 
-  mov edi, page_table.l2
-  or edi, PAGE_WRITABLE | PAGE_PRESENT
-  mov dword [stack], edi
+  mov edi, page_table.l3
+  mov esi, page_table.l2
+  or esi, PAGE_WRITABLE | PAGE_PRESENT
+  mov cx, 0x200 - 1
+.set_l3e_next:
+  mov dword [edi], esi
+  add edi, 0x8
+  add esi, 0x1000
+  loop .set_l3e_next
 
-  mov dword [page_table.l2], PAGE_PS | PAGE_WRITABLE | PAGE_PRESENT
+  mov edi, page_table.l2
+  mov cx, 0x200 * 0x200 - 1
+.set_l2e_next:
+  mov dword [edi], PAGE_PS | PAGE_WRITABLE | PAGE_PRESENT
+  add edi, 0x8
+  loop .set_l2e_next
 
   ; now we set up PAE (physical address extension) by setting bit 5
   ; of control register 4
@@ -538,11 +570,24 @@ HIGH_ADDR_OFFSET equ 0xffffffff80000000
   or eax, 1 << 31
   mov cr0, eax ; paging is enabled as soon as this register is set
 
+  mov ecx, 0x200000
+  mov edx, [module.mod_end]
+  call pm32_align_up
+  mov esi, eax
+  mov ecx, empty_str
+  call pm32_putstrln
+  mov ecx, empty_str
+  call pm32_putstrln
+  mov edx, esi
+  call pm32_puthex
+  jmp $
+
 %ifdef DEBUG
   ; debug: tell the user we've set up paging
   mov ecx, paging_set_up_str
   call pm32_putstrln
 %endif
+  jmp $
 
   ; So supposedly at this point we are actually in long mode, however
   ; we have one last thing to set up in the form of a global descriptor table
@@ -849,15 +894,15 @@ section .bss
 ; page tables must be page aligned. Let's align all 4 2 MiB pages of the stack,
 ; minus 3 4 KiB chunks for the page tables
 
-align 0x20000
+align 0x200000
 
 ; reserve us some stack space
 stack:
-  resb STACK_SIZE
 page_table:
 .l2:
-  resb 0x1000
+  resb 0x1000 * 512
 .l3:
   resb 0x1000
 .l4:
   resb 0x1000
+  resb STACK_SIZE - 0x1000 * 514
