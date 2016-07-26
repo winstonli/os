@@ -324,7 +324,7 @@ pm32_align_up:
 ; TODO: we should really have some kind of guard to ensure this does not
 ; accidentally overflow into somewhere important!
 ; We have 3 page tables (1 KiB each) at the top of the stack
-STACK_SIZE equ 0x1600000
+STACK_SIZE equ 0x1000000
 
 ; the value of eax when we get control of the machine from grub (see 3.3)
 MULTIBOOT_EXPECTED_MAGIC equ 0x36d76289
@@ -333,7 +333,7 @@ MULTIBOOT_EXPECTED_MAGIC equ 0x36d76289
 ;; ENTRY POINT ;;
 ;;;;;;;;;;;;;;;;;
 start:
-  mov esp, stack + STACK_SIZE ; setup stack
+  mov esp, stack + STACK_SIZE - 0x1000 ; setup stack
 
   ; state of the machine at this point: (see section 3.3 for more details)
   ; eax contains multiboot magic value (MULTIBOOT_EXPECTED_MAGIC)
@@ -518,6 +518,17 @@ PAGE_PS equ 1 << 7
 ; once the higher half addressing is activated (equiv. to -2 GiB unsigned)
 HIGH_ADDR_OFFSET equ 0xffffffff80000000
 
+  mov ecx, link_kernel_end
+  mov edx, module.mod_end
+  call pm32_max
+  mov ecx, 0x200000
+  mov edx, eax
+  call pm32_align_up
+  mov ecx, 0x200000
+  cdq
+  div ecx
+  mov [kernel_num_pages_2m], eax
+
   ; Set up an identity mapping, so that later we can set up the real mapping
   ; (with the identity mapping still existing) so that we can swap the rip and
   ; rsp into the real mapping without everything exploding.
@@ -531,26 +542,25 @@ HIGH_ADDR_OFFSET equ 0xffffffff80000000
   mov edi, page_table.l4
   mov cr3, edi ; c3 takes the physical base of the PML4
 
-  mov edi, page_table.l3
+  mov edi, page_table.l3_ident
   or edi, PAGE_WRITABLE | PAGE_PRESENT
   mov dword [page_table.l4], edi
 
   mov edi, page_table.l2
+  mov eax, [kernel_num_pages_2m]
+  mov ecx, 0x8
+  mul ecx
+  add eax, page_table.l2
 .set_l2e_next:
   mov dword [edi], PAGE_PS | PAGE_WRITABLE | PAGE_PRESENT
   add edi, 0x8
-  cmp edi, page_table.l2 + 0x200 * 0x200 * 0x8
+  cmp edi, eax
   jl .set_l2e_next
 
-  mov edi, page_table.l3
+  mov edi, page_table.l3_ident
   mov esi, page_table.l2
   or esi, PAGE_WRITABLE | PAGE_PRESENT
-.set_l3e_next:
   mov dword [edi], esi
-  add edi, 0x8
-  add esi, 0x1000
-  cmp edi, page_table.l3 + 0x200 * 0x8
-  jl .set_l3e_next
 
   ; now we set up PAE (physical address extension) by setting bit 5
   ; of control register 4
@@ -834,6 +844,8 @@ empty_str:
 
 current_line:
   dq 0
+kernel_num_pages_2m:
+  dd 0
 
 module:
 .type:
@@ -899,9 +911,11 @@ align 0x200000
 stack:
 page_table:
 .l2:
-  resb 0x1000 * 512
-.l3:
+  resb 0x1000 * 256
+.l3_ident:
   resb 0x1000
 .l4:
   resb 0x1000
-  resb STACK_SIZE - 0x1000 * 514
+  resb STACK_SIZE - 0x1000 * 258
+.l3:
+  resb 0x1000
