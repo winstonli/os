@@ -58,20 +58,9 @@ void irq_register_handler(uint8_t irq, void (*handler)(const registers_t *)) {
 
 extern "C" void irq_handler(const registers_t *regs) {
   auto irq_no = regs->int_no - PIC1_OFFSET;
+
   if (handlers[irq_no]) {
     handlers[irq_no](regs);
-  } else {
-    terminal_printf("\ngot a unhandled interrupt request\n");
-    terminal_printf("int_no=%x, err_no=%x, ip=%x)\n", regs->int_no,
-                    regs->err_code, regs->rip);
-
-    switch (irq_no) {
-      case 1: {  // keyboard input. TODO this should be done elsewhere!
-        // we _must_ read from 0x60, even if we don't care about the result!
-        auto scancode = in<uint8_t>(0x60);
-        terminal_printf("got scancode: %x\n", scancode);
-      }
-    }
   }
 
   // tell the pic that we're ready for more interrupts!

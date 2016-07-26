@@ -7,6 +7,7 @@
 #include "idt.h"
 #include "irq.h"
 #include "isr.h"
+#include "keyboard.h"
 #include "pic.h"
 #include "pit.h"
 #include "terminal.h"
@@ -44,6 +45,7 @@ extern "C" void kernel_main(const uint32_t multiboot_magic,
   isr_init();
   irq_init();
   pit_init();
+  keyboard_init();
   pic_init();
   uint64_t rip = 0;
   asm volatile("leaq (%%rip), %0" : "=r"(rip));
