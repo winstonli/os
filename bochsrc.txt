@@ -3,7 +3,7 @@ log: bochsout.log
 display_library: sdl
 
 cpu: ips=10000000
-clock: sync=realtime
+clock: sync=slowdown
 
 # CD-ROM image
 ata0-slave:  type=cdrom, path="kernel.iso", status=inserted

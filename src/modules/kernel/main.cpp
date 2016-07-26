@@ -3,6 +3,7 @@
 #include <common/multiboot2.h>
 
 #include <assert.h>
+#include <cmos.h>
 #include <idt.h>
 #include <irq.h>
 #include <isr.h>
@@ -52,6 +53,7 @@ extern "C" void kernel_main(const uint32_t multiboot_magic,
   isr_init();
   irq_init();
   pit_init();
+  cmos_init();
   keyboard_init();
   pic_init();
   uint64_t rip = 0;
