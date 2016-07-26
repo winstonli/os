@@ -15,7 +15,7 @@
 
 #include <boot/multiboot_info.h>
 #include <util/fixedsize_vector.h>
-#include <vm/page_table.h>
+#include <vm/vm.h>
 
 // entry point of 64-bit kernel proper, as jumped to from entry.s
 extern "C" void kernel_main(const uint32_t multiboot_magic,
@@ -44,11 +44,7 @@ extern "C" void kernel_main(const uint32_t multiboot_magic,
   klog_warn("hello warn");
   klog_err("Hello error");
   klog_crit("Hello crit");
-  multiboot_info::init(multiboot_data);
-  fixedsize_vector<multiboot_mmap_entry, 32> v;
-  multiboot_info::get_memory_map(static_cast<multiboot_info *>(multiboot_data),
-                                 v);
-  page_table::init();
+  vm::init(*static_cast<multiboot_info *>(multiboot_data));
   idt_init();
   isr_init();
   irq_init();
