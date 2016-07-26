@@ -535,22 +535,22 @@ HIGH_ADDR_OFFSET equ 0xffffffff80000000
   or edi, PAGE_WRITABLE | PAGE_PRESENT
   mov dword [page_table.l4], edi
 
+  mov edi, page_table.l2
+.set_l2e_next:
+  mov dword [edi], PAGE_PS | PAGE_WRITABLE | PAGE_PRESENT
+  add edi, 0x8
+  cmp edi, page_table.l2 + 0x200 * 0x200 * 0x8
+  jl .set_l2e_next
+
   mov edi, page_table.l3
   mov esi, page_table.l2
   or esi, PAGE_WRITABLE | PAGE_PRESENT
-  mov cx, 0x200 - 1
 .set_l3e_next:
   mov dword [edi], esi
   add edi, 0x8
   add esi, 0x1000
-  loop .set_l3e_next
-
-  mov edi, page_table.l2
-  mov cx, 0x200 * 0x200 - 1
-.set_l2e_next:
-  mov dword [edi], PAGE_PS | PAGE_WRITABLE | PAGE_PRESENT
-  add edi, 0x8
-  loop .set_l2e_next
+  cmp edi, page_table.l3 + 0x200 * 0x8
+  jl .set_l3e_next
 
   ; now we set up PAE (physical address extension) by setting bit 5
   ; of control register 4
@@ -580,7 +580,6 @@ HIGH_ADDR_OFFSET equ 0xffffffff80000000
   call pm32_putstrln
   mov edx, esi
   call pm32_puthex
-  jmp $
 
 %ifdef DEBUG
   ; debug: tell the user we've set up paging
