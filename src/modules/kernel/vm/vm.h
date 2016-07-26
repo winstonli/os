@@ -1,7 +1,8 @@
 #pragma once
 
-#include <stdint.h>
+#include <cstdint>
 
+#include <boot/multiboot_info.h>
 #include <vm/page_table.h>
 
 extern "C" void *link_kern_start;
@@ -17,6 +18,9 @@ class vm {
   static constexpr uint64_t kernel_offset = 0xffff'ffff'8000'0000;
 
  public:
+
+  static void init(const multiboot_info &multiboot);
+
   template <typename T>
   static T *align_up(T *addr, int64_t sz) {
     uintptr_t iaddr = reinterpret_cast<uintptr_t>(addr);
