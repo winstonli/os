@@ -117,11 +117,16 @@ void terminal_print_hex(uint64_t value) {
   }
 }
 
-void terminal_print_dec_unsigned(uint64_t value) {
+void terminal_print_dec_unsigned(uint64_t value, int min_length UNUSED) {
   bool seen_nonzero = false;
+  min_length = min_length <= 0 ? 1 : min_length;
+  uint64_t min_length_cmp = 1;
+  for (int i = 0; i < min_length; ++i) {
+    min_length_cmp = min_length_cmp * 10;
+  }
   for (uint64_t divisor = 10000000000000000000ull; divisor > 0; divisor /= 10) {
     uint64_t digit_idx = (value / divisor) % 10;
-    if (digit_idx > 0 || seen_nonzero) {
+    if (digit_idx > 0 || seen_nonzero || divisor < min_length_cmp) {
       terminal_putchar('0' + digit_idx);
       seen_nonzero = true;
     }
@@ -131,13 +136,13 @@ void terminal_print_dec_unsigned(uint64_t value) {
   }
 }
 
-void terminal_print_dec_signed(int64_t value) {
+void terminal_print_dec_signed(int64_t value, int min_length) {
   // TODO: we don't handle MIN_INT
   if (value < 0) {
     terminal_putchar('-');
     value = -value;
   }
-  terminal_print_dec_unsigned(value);
+  terminal_print_dec_unsigned(value, min_length);
 }
 
 void terminal_printf(const char *format, ...) {
@@ -145,6 +150,8 @@ void terminal_printf(const char *format, ...) {
   va_start(params, format);
 
   bool got_percent = false;
+  bool got_zero = false;
+  int zero_extend = 0;
   for (; *format != '\0'; ++format) {
     char ch = *format;
     if (ch == '%') {
@@ -158,7 +165,14 @@ void terminal_printf(const char *format, ...) {
       terminal_putchar(ch);
       continue;
     }
+    if (got_zero && ch >= '0' && ch <= '9') {
+      zero_extend = zero_extend * 10 + (ch - '0');
+      continue;
+    }
     switch (ch) {
+      case '0':
+        got_zero = true;
+        break;
       case 's': {
         auto arg = va_arg(params, const char *);
         terminal_write(arg);
@@ -173,13 +187,17 @@ void terminal_printf(const char *format, ...) {
       }
       case 'd': {
         auto arg = va_arg(params, int32_t);
-        terminal_print_dec_signed(arg);
+        terminal_print_dec_signed(arg, zero_extend);
         got_percent = false;
         break;
       }
       default:
         terminal_putchar(ch);
         got_percent = false;
+    }
+    if (!got_percent) {
+      zero_extend = false;
+      got_zero = false;
     }
   }
 

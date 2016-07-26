@@ -98,8 +98,9 @@ void cmos_handler(const registers_t *regs UNUSED) {
   auto datetime = read_rtc();
   terminal_push_cursor_state(0, 0, terminal_colour_t::BLACK,
                              terminal_colour_t::WHITE);
-  terminal_printf("%d:%d:%d %d/%d/%d\n", datetime.hour, datetime.minute,
-                  datetime.second, datetime.day, datetime.month, datetime.year);
+  terminal_printf("%02d:%02d:%02d %02d/%02d/%02d\n", datetime.hour,
+                  datetime.minute, datetime.second, datetime.day,
+                  datetime.month, datetime.year);
   terminal_pop_cursor_state();
 }
 
