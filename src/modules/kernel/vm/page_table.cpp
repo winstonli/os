@@ -5,6 +5,7 @@
 #include <log.h>
 #include <register.h>
 #include <terminal.h>
+#include <util/fixedsize_vector.h>
 #include <vm/vm.h>
 
 DATA page_table *page_table::ptr;

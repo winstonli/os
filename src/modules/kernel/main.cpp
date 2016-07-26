@@ -1,16 +1,20 @@
-#include <boot/multiboot_info.h>
+#include <common/common.h>
+#include <common/interrupts.h>
+#include <common/multiboot2.h>
+
+#include <assert.h>
+#include <idt.h>
+#include <irq.h>
+#include <isr.h>
+#include <keyboard.h>
 #include <log.h>
+#include <pic.h>
+#include <pit.h>
+#include <terminal.h>
+
+#include <boot/multiboot_info.h>
+#include <util/fixedsize_vector.h>
 #include <vm/page_table.h>
-#include "common/common.h"
-#include "common/interrupts.h"
-#include "common/multiboot2.h"
-#include "idt.h"
-#include "irq.h"
-#include "isr.h"
-#include "keyboard.h"
-#include "pic.h"
-#include "pit.h"
-#include "terminal.h"
 
 // entry point of 64-bit kernel proper, as jumped to from entry.s
 extern "C" void kernel_main(const uint32_t multiboot_magic,
@@ -40,6 +44,9 @@ extern "C" void kernel_main(const uint32_t multiboot_magic,
   klog_err("Hello error");
   klog_crit("Hello crit");
   multiboot_info::init(multiboot_data);
+  fixedsize_vector<multiboot_mmap_entry, 32> v;
+  multiboot_info::get_memory_map(static_cast<multiboot_info *>(multiboot_data),
+                                 v);
   page_table::init();
   idt_init();
   isr_init();

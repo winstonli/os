@@ -1,8 +1,8 @@
 #include "keyboard.h"
+#include "common/string.h"
 #include "irq.h"
 #include "registers.h"
 #include "terminal.h"
-#include "common/string.h"
 
 #include <limits.h>
 

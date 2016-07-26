@@ -1,0 +1,19 @@
+#pragma once
+
+#include <type_traits>
+
+namespace std {
+
+template <class _Tp>
+void swap(
+    _Tp& __x,
+    _Tp& __y) noexcept(
+        is_nothrow_move_constructible<_Tp>::value &&
+        is_nothrow_move_assignable<_Tp>::value
+    ) {
+    _Tp __t(move(__x));
+    __x = move(__y);
+    __y = move(__t);
+}
+
+}
