@@ -8,10 +8,14 @@
 // fine though)
 #define PIC1_OFFSET 0x20  // new offset for master
 
+namespace pic {
+
 // initialise the pic controller, must be called before interrupts are enabled
-void pic_init();
+void init();
 
 // send an end-of-interrupt signal to the pic for the corresponding interrupt
 // request number (where irq_no = int_no - PIC1_OFFSET)
 // irq must be in the range 0 through 15 inclusive
-void pic_send_eoi(uint8_t irq);
+void send_eoi(uint8_t irq);
+
+}

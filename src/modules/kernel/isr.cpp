@@ -1,3 +1,4 @@
+#include "isr.h"
 #include "common/common.h"
 #include "idt.h"
 #include "registers.h"
@@ -73,43 +74,6 @@ enum exception_code_t {
   // RESERVED (0x1f)
 };
 
-void isr_init() {
-  // must be called after idt_init and before sti
-
-  idt_set_handler(0, &isr0);
-  idt_set_handler(1, &isr1);
-  idt_set_handler(2, &isr2);
-  idt_set_handler(3, &isr3);
-  idt_set_handler(4, &isr4);
-  idt_set_handler(5, &isr5);
-  idt_set_handler(6, &isr6);
-  idt_set_handler(7, &isr7);
-  idt_set_handler(8, &isr8);
-  idt_set_handler(9, &isr9);
-  idt_set_handler(10, &isr10);
-  idt_set_handler(11, &isr11);
-  idt_set_handler(12, &isr12);
-  idt_set_handler(13, &isr13);
-  idt_set_handler(14, &isr14);
-  idt_set_handler(15, &isr15);
-  idt_set_handler(16, &isr16);
-  idt_set_handler(17, &isr17);
-  idt_set_handler(18, &isr18);
-  idt_set_handler(19, &isr19);
-  idt_set_handler(20, &isr20);
-  idt_set_handler(21, &isr21);
-  idt_set_handler(22, &isr22);
-  idt_set_handler(23, &isr23);
-  idt_set_handler(24, &isr24);
-  idt_set_handler(25, &isr25);
-  idt_set_handler(26, &isr26);
-  idt_set_handler(27, &isr27);
-  idt_set_handler(28, &isr28);
-  idt_set_handler(29, &isr29);
-  idt_set_handler(30, &isr30);
-  idt_set_handler(31, &isr31);
-}
-
 extern "C" void isr_handler(const registers_t *regs) {
   auto gpf_err_ptr = reinterpret_cast<const gpf_err_code *>(&regs->err_code);
   switch (static_cast<exception_code_t>(regs->int_no)) {
@@ -123,4 +87,41 @@ extern "C" void isr_handler(const registers_t *regs) {
       terminal_printf("\ngot an exception\n  int_no=%x, err_no=%x, ip=%x)\n",
                       regs->int_no, regs->err_code, regs->rip);
   }
+}
+
+void isr::init() {
+  // must be called after idt_init and before sti
+
+  idt::set_handler(0, &isr0);
+  idt::set_handler(1, &isr1);
+  idt::set_handler(2, &isr2);
+  idt::set_handler(3, &isr3);
+  idt::set_handler(4, &isr4);
+  idt::set_handler(5, &isr5);
+  idt::set_handler(6, &isr6);
+  idt::set_handler(7, &isr7);
+  idt::set_handler(8, &isr8);
+  idt::set_handler(9, &isr9);
+  idt::set_handler(10, &isr10);
+  idt::set_handler(11, &isr11);
+  idt::set_handler(12, &isr12);
+  idt::set_handler(13, &isr13);
+  idt::set_handler(14, &isr14);
+  idt::set_handler(15, &isr15);
+  idt::set_handler(16, &isr16);
+  idt::set_handler(17, &isr17);
+  idt::set_handler(18, &isr18);
+  idt::set_handler(19, &isr19);
+  idt::set_handler(20, &isr20);
+  idt::set_handler(21, &isr21);
+  idt::set_handler(22, &isr22);
+  idt::set_handler(23, &isr23);
+  idt::set_handler(24, &isr24);
+  idt::set_handler(25, &isr25);
+  idt::set_handler(26, &isr26);
+  idt::set_handler(27, &isr27);
+  idt::set_handler(28, &isr28);
+  idt::set_handler(29, &isr29);
+  idt::set_handler(30, &isr30);
+  idt::set_handler(31, &isr31);
 }

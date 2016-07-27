@@ -23,8 +23,8 @@ static void keyboard_handler(const registers_t *regs UNUSED) {
   }
 }
 
-void keyboard_init() {
-  irq_register_handler(IRQ_PS2_KEYBOARD, &keyboard_handler);
+void keyboard::init() {
+  irq::register_handler(IRQ_PS2_KEYBOARD, &keyboard_handler);
 
   memzero(&scancodes[0], NUM_SCANCODES);
 

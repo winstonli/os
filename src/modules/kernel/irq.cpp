@@ -27,31 +27,31 @@ extern "C" void irq15();
 #define HANDLERS_COUNT 16
 STATIC void (*handlers[HANDLERS_COUNT])(const registers_t *);
 
-void irq_init() {
+void irq::init() {
   // must be called after idt_init and before sti
   // additionally, pic_init must be called before sti
 
-  idt_set_handler(PIC1_OFFSET + 0, &irq0);
-  idt_set_handler(PIC1_OFFSET + 1, &irq1);
-  idt_set_handler(PIC1_OFFSET + 2, &irq2);
-  idt_set_handler(PIC1_OFFSET + 3, &irq3);
-  idt_set_handler(PIC1_OFFSET + 4, &irq4);
-  idt_set_handler(PIC1_OFFSET + 5, &irq5);
-  idt_set_handler(PIC1_OFFSET + 6, &irq6);
-  idt_set_handler(PIC1_OFFSET + 7, &irq7);
-  idt_set_handler(PIC1_OFFSET + 8, &irq8);
-  idt_set_handler(PIC1_OFFSET + 9, &irq9);
-  idt_set_handler(PIC1_OFFSET + 10, &irq10);
-  idt_set_handler(PIC1_OFFSET + 11, &irq11);
-  idt_set_handler(PIC1_OFFSET + 12, &irq12);
-  idt_set_handler(PIC1_OFFSET + 13, &irq13);
-  idt_set_handler(PIC1_OFFSET + 14, &irq14);
-  idt_set_handler(PIC1_OFFSET + 15, &irq15);
+  idt::set_handler(PIC1_OFFSET + 0, &irq0);
+  idt::set_handler(PIC1_OFFSET + 1, &irq1);
+  idt::set_handler(PIC1_OFFSET + 2, &irq2);
+  idt::set_handler(PIC1_OFFSET + 3, &irq3);
+  idt::set_handler(PIC1_OFFSET + 4, &irq4);
+  idt::set_handler(PIC1_OFFSET + 5, &irq5);
+  idt::set_handler(PIC1_OFFSET + 6, &irq6);
+  idt::set_handler(PIC1_OFFSET + 7, &irq7);
+  idt::set_handler(PIC1_OFFSET + 8, &irq8);
+  idt::set_handler(PIC1_OFFSET + 9, &irq9);
+  idt::set_handler(PIC1_OFFSET + 10, &irq10);
+  idt::set_handler(PIC1_OFFSET + 11, &irq11);
+  idt::set_handler(PIC1_OFFSET + 12, &irq12);
+  idt::set_handler(PIC1_OFFSET + 13, &irq13);
+  idt::set_handler(PIC1_OFFSET + 14, &irq14);
+  idt::set_handler(PIC1_OFFSET + 15, &irq15);
 
   memzero(&handlers[0], HANDLERS_COUNT);
 }
 
-void irq_register_handler(uint8_t irq, void (*handler)(const registers_t *)) {
+void irq::register_handler(uint8_t irq, void (*handler)(const registers_t *)) {
   assert(irq < HANDLERS_COUNT);
   handlers[irq] = handler;
 }
@@ -64,5 +64,5 @@ extern "C" void irq_handler(const registers_t *regs) {
   }
 
   // tell the pic that we're ready for more interrupts!
-  pic_send_eoi(irq_no);
+  pic::send_eoi(irq_no);
 }

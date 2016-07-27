@@ -29,7 +29,7 @@
 
 // see http://wiki.osdev.org/PIC#Initialisation
 // and http://stackoverflow.com/questions/282983/setting-up-irq-mapping
-void pic_init() {
+void pic::init() {
   unsigned char a1, a2;
 
   a1 = in<uint8_t>(PIC1_DATA);  // save masks
@@ -61,7 +61,7 @@ void pic_init() {
 }
 
 // see http://wiki.osdev.org/8259_PIC#End_of_Interrupt
-void pic_send_eoi(uint8_t irq) {
+void pic::send_eoi(uint8_t irq) {
   if (irq >= 8) {
     // TODO: we do not handle the case of a spurious irq, in which case we must
     // NOT send an eoi to the slave (but still send one to the master, see

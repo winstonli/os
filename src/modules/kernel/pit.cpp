@@ -19,14 +19,14 @@ static void pit_handler(const registers_t *regs) {
   }
 }
 
-void pit_init() {
-  irq_register_handler(PIT_IRQ, &pit_handler);
+void pit::init() {
+  irq::register_handler(PIT_IRQ, &pit_handler);
 
   memzero(&handlers[0], MAX_HANDLERS);
   handler_count = 0;
 }
 
-void pit_register_periodic(void (*handler)(const registers_t *)) {
+void pit::register_periodic(void (*handler)(const registers_t *)) {
   assert(handler_count < MAX_HANDLERS);
   handlers[handler_count++] = handler;
 }

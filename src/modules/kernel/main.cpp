@@ -45,13 +45,13 @@ extern "C" void kernel_main(const uint32_t multiboot_magic,
   klog_err("Hello error");
   klog_crit("Hello crit");
   vm::init(*static_cast<multiboot_info *>(multiboot_data));
-  idt_init();
-  isr_init();
-  irq_init();
-  pit_init();
-  cmos_init();
-  keyboard_init();
-  pic_init();
+  idt::init();
+  isr::init();
+  irq::init();
+  pit::init();
+  cmos::init();
+  keyboard::init();
+  pic::init();
   uint64_t rip = 0;
   asm volatile("leaq (%%rip), %0" : "=r"(rip));
 

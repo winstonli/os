@@ -104,4 +104,4 @@ void cmos_handler(const registers_t *regs UNUSED) {
   terminal_pop_cursor_state();
 }
 
-void cmos_init() { pit_register_periodic(&cmos_handler); }
+void cmos::init() { pit::register_periodic(&cmos_handler); }
