@@ -50,7 +50,7 @@ public:
 
   const T &operator[](size_t i) const { return data()[i]; }
 
-  size_t size() { return _size; }
+  size_t size() const { return _size; }
 
   const T *data() const { return reinterpret_cast<const T *>(arr.data()); }
 

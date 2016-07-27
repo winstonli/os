@@ -78,6 +78,7 @@ kernel.elf: module.ld src/modules/kernel/entry.o src/modules/kernel/main.o \
             src/modules/kernel/terminal.o \
             src/modules/kernel/boot/multiboot_info.o \
             src/modules/kernel/util/string_util.o \
+            src/modules/kernel/vm/frame_pool.o \
             src/modules/kernel/vm/page_table.o \
             src/modules/kernel/vm/pallocator.o \
             src/modules/kernel/vm/pml4e.o \

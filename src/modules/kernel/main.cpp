@@ -19,7 +19,8 @@
 
 // entry point of 64-bit kernel proper, as jumped to from entry.s
 extern "C" void kernel_main(const uint32_t multiboot_magic,
-                            void *multiboot_data) {
+                            void *multiboot_data, void *start_mod_start,
+                            void *start_mod_end) {
   terminal_init();
 
   terminal_push_cursor_state(79, 24, terminal_colour_t::WHITE,
@@ -44,7 +45,8 @@ extern "C" void kernel_main(const uint32_t multiboot_magic,
   klog_warn("hello warn");
   klog_err("Hello error");
   klog_crit("Hello crit");
-  vm::init(*static_cast<multiboot_info *>(multiboot_data));
+  vm::init(*static_cast<multiboot_info *>(multiboot_data), start_mod_start,
+           start_mod_end);
   idt::init();
   isr::init();
   irq::init();

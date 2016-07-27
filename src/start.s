@@ -801,7 +801,8 @@ realm64: ; from here on we are officially (like, actually) in long mode!
   mov edi, dword [rsp+8] ; magic
   mov esi, dword [rsp+4] ; info
   add rsi, HIGH_ADDR_OFFSET ; convert info physical addr to virtual addr
-
+  mov edx, link_kernel_start
+  mov ecx, link_kernel_end
   ; ...and jump straight to it! (note that since we don't know anything about
   ; the module other than its load address, we're hoping that the module has
   ; a trampoline or equivalent at the beginning of the module that will kindly
