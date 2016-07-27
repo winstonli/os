@@ -520,8 +520,9 @@ PAGE_PS equ 1 << 7
 HIGH_ADDR_OFFSET equ 0xffffffff80000000
 
   mov ecx, link_kernel_end
-  mov edx, module.mod_end
+  mov edx, [module.mod_end]
   call pm32_max
+
   mov ecx, 0x200000
   mov edx, eax
   call pm32_align_up
@@ -770,6 +771,12 @@ realm64: ; from here on we are officially (like, actually) in long mode!
   call lm64_puthex
 %endif
   ; unset identity mapping values
+
+  mov rcx, empty_str
+  call lm64_putstrln
+  mov edx, [rsp]
+  call lm64_puthex
+
   mov rdi, page_table.l4
   add rdi, HIGH_ADDR_OFFSET
   mov dword [rdi], 0
@@ -799,7 +806,7 @@ realm64: ; from here on we are officially (like, actually) in long mode!
   ; the module other than its load address, we're hoping that the module has
   ; a trampoline or equivalent at the beginning of the module that will kindly
   ; redirect us to where we actually want to go.
-
+  ; mov dword [0xffffffff81400000], 1
   call rax
 
   ; if we return from that then all we can do is disable interrupts and hang
