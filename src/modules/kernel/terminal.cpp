@@ -10,6 +10,8 @@
 #define TEXT_NUM_COLS 80
 #define CURSOR_STATE_STACK_MAX_SIZE 16
 
+#define VGA_BASE_PORT 0x3d4
+
 struct terminal_cursor_state_t {
   uint8_t x, y, colour;
 };
@@ -21,6 +23,11 @@ void terminal::init() {
   cursor_state_stack_idx = 0;
   memzero(&cursor_state_stack[0], CURSOR_STATE_STACK_MAX_SIZE);
   terminal::pop_cursor_state();  // initialise to default state
+
+  // disable cursor
+  // TODO: we should get this port number from the bios data area
+  out<uint16_t>(VGA_BASE_PORT, 0x200a);
+  out<uint16_t>(VGA_BASE_PORT, 0xb);
 }
 
 void terminal::push_cursor_state(uint8_t x, uint8_t y, terminal::colour_t fg,
@@ -61,13 +68,34 @@ void terminal_scrollback() {
 
 void terminal::putchar(char ch) {
   auto &elem = cursor_state_stack[cursor_state_stack_idx];
+
+  // handle cases where scrollback should not occur
+  bool handled = true;
+  switch (ch) {
+    case '\b':  // backspace
+      if (elem.x-- == 0) {
+        elem.y = MAX(0, elem.y - 1);
+        elem.x = TEXT_NUM_COLS - 1;
+      }
+      break;
+    case '\r':  // carrage return
+      elem.x = 0;
+      break;
+    default:
+      handled = false;
+  }
+  if (handled) {
+    return;
+  }
+
   while (elem.y >= TEXT_NUM_ROWS) {
     terminal_scrollback();
     --elem.y;
   }
+  // then handle remaining cases after applying scrolling
   auto where = TEXT_VIDEO_MEMORY + (elem.y * TEXT_NUM_COLS) + elem.x;
   switch (ch) {
-    case '\n':
+    case '\n':  // newline
       elem.x = 0;
       ++elem.y;
       break;

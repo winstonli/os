@@ -40,6 +40,7 @@ void keyboard::init() {
   scancodes[0xb] = '0';
   scancodes[0xc] = '-';
   scancodes[0xd] = '=';
+  scancodes[0xe] = '\b';
 
   scancodes[0x10] = 'q';
   scancodes[0x11] = 'w';
@@ -51,6 +52,8 @@ void keyboard::init() {
   scancodes[0x17] = 'i';
   scancodes[0x18] = 'o';
   scancodes[0x19] = 'p';
+
+  scancodes[0x1c] = '\n';
 
   scancodes[0x1e] = 'a';
   scancodes[0x1f] = 's';
