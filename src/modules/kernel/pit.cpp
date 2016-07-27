@@ -15,14 +15,23 @@
 #define PIT_ACCESS_16BIT 0x30  // access mode: low byte then high byte
 
 #define MAX_HANDLERS 16
-STATIC void (*handlers[MAX_HANDLERS])(const registers_t *);
+
+struct pit_handler_t {
+  void (*fn_ptr)(const registers_t *);
+  uint64_t reload_ticks;
+  uint64_t remaining_ticks;
+};
+
+STATIC pit_handler_t handlers[MAX_HANDLERS];
 STATIC uint8_t handler_count;
+STATIC uint16_t pit_frequency[3];  // frequency for each channel (hz)
 
 static void pit_handler(const registers_t *regs) {
-  terminal::putchar('.');
-
   for (uint8_t i = 0; i < handler_count; ++i) {
-    handlers[i](regs);
+    if (--handlers[i].remaining_ticks == 0) {
+      handlers[i].remaining_ticks = handlers[i].reload_ticks;
+      (*handlers[i].fn_ptr)(regs);
+    }
   }
 }
 
@@ -59,6 +68,8 @@ static void pit_start_counter(uint16_t freq, uint8_t counter_id,
 
   out<uint8_t>(PIT_CHAN0_REG + counter_id, (freq_divisor & 0xff));
   out<uint8_t>(PIT_CHAN0_REG + counter_id, ((freq_divisor >> 8) & 0xff));
+
+  pit_frequency[counter_id] = freq;
 }
 
 void pit::init() {
@@ -66,11 +77,19 @@ void pit::init() {
 
   memzero(&handlers[0], MAX_HANDLERS);
   handler_count = 0;
+  memzero(&pit_frequency[0], 3);
 
-  pit_start_counter(10, 0, pit_mode_t::SQUARE_WAVE);
+  pit_start_counter(1000, 0, pit_mode_t::SQUARE_WAVE);
 }
 
-void pit::register_periodic(void (*handler)(const registers_t *)) {
+void pit::register_periodic(void (*fn_ptr)(const registers_t *),
+                            uint64_t interval_ms) {
   assert(handler_count < MAX_HANDLERS);
-  handlers[handler_count++] = handler;
+
+  auto &handler = handlers[handler_count];
+  handler.fn_ptr = fn_ptr;
+  handler.reload_ticks = (interval_ms * pit_frequency[0]) / 1000;
+  handler.remaining_ticks = handler.reload_ticks;
+
+  handler_count++;
 }
