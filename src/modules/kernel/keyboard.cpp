@@ -17,9 +17,9 @@ static void keyboard_handler(const registers_t *regs UNUSED) {
   if (scancode & 0x80) {
     // do nothing for "key up" codes
   } else if (scancodes[scancode]) {
-    terminal_putchar(scancodes[scancode]);
+    terminal::putchar(scancodes[scancode]);
   } else {
-    terminal_printf("(unknown scancode: %x)", scancode);
+    terminal::printf("(unknown scancode: %x)", scancode);
   }
 }
 

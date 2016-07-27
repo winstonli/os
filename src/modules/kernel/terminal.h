@@ -2,7 +2,9 @@
 
 #include <stdint.h>
 
-enum class terminal_colour_t {
+namespace terminal {
+
+enum class colour_t {
   BLACK = 0x0,
   BLUE = 0x1,
   GREEN = 0x2,
@@ -22,27 +24,28 @@ enum class terminal_colour_t {
 };
 
 // this must be called before any of the below functions can be used
-void terminal_init(void);
+void init();
 
 // sets the position of the cursor on the screen, and the colour for new text
 // maintaining the old position in a stack
-void terminal_push_cursor_state(uint8_t x, uint8_t y, terminal_colour_t fg,
-                                terminal_colour_t bg);
+void push_cursor_state(uint8_t x, uint8_t y, colour_t fg, colour_t bg = colour_t::BLACK);
 
 // just sets a colour
-void terminal_set_colour(terminal_colour_t fg, terminal_colour_t bg);
+void set_colour(colour_t fg, colour_t bg = colour_t::BLACK);
 
 // restore a previously held state of the cursor. if the stack is empty,
 // restores to a default state
-void terminal_pop_cursor_state(void);
+void pop_cursor_state(void);
 
 // prints the specified character to the terminal
-void terminal_putchar(char ch);
+void putchar(char ch);
 
 // prints the specified null-terminated string to the terminal
-void terminal_write(const char *str);
+void write(const char *str);
 
 // C-style printf to text console
-void terminal_printf(const char *format, ...);
+void printf(const char *format, ...);
 
-void terminal_clear();
+void clear();
+
+}

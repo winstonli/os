@@ -17,14 +17,14 @@ struct terminal_cursor_state_t {
 STATIC terminal_cursor_state_t cursor_state_stack[CURSOR_STATE_STACK_MAX_SIZE];
 STATIC int cursor_state_stack_idx;
 
-void terminal_init(void) {
+void terminal::init() {
   cursor_state_stack_idx = 0;
   memzero(&cursor_state_stack[0], CURSOR_STATE_STACK_MAX_SIZE);
-  terminal_pop_cursor_state();  // initialise to default state
+  terminal::pop_cursor_state();  // initialise to default state
 }
 
-void terminal_push_cursor_state(uint8_t x, uint8_t y, terminal_colour_t fg,
-                                terminal_colour_t bg) {
+void terminal::push_cursor_state(uint8_t x, uint8_t y, terminal::colour_t fg,
+                                 terminal::colour_t bg) {
   // TODO: do something if the stack would overflow
   auto &elem = cursor_state_stack[++cursor_state_stack_idx];
   elem.x = x;
@@ -32,12 +32,12 @@ void terminal_push_cursor_state(uint8_t x, uint8_t y, terminal_colour_t fg,
   elem.colour = (static_cast<uint8_t>(bg) << 4) | static_cast<uint8_t>(fg);
 }
 
-void terminal_set_colour(terminal_colour_t fg, terminal_colour_t bg) {
+void terminal::set_colour(terminal::colour_t fg, terminal::colour_t bg) {
   auto &elem = cursor_state_stack[cursor_state_stack_idx];
   elem.colour = (static_cast<uint8_t>(bg) << 4) | static_cast<uint8_t>(fg);
 }
 
-void terminal_pop_cursor_state(void) {
+void terminal::pop_cursor_state(void) {
   if (cursor_state_stack_idx == 0) {
     // cannot remove from empty stack, so restore default state
     auto &elem = cursor_state_stack[0];
@@ -59,7 +59,7 @@ void terminal_scrollback() {
           TEXT_NUM_COLS);
 }
 
-void terminal_putchar(char ch) {
+void terminal::putchar(char ch) {
   auto &elem = cursor_state_stack[cursor_state_stack_idx];
   while (elem.y >= TEXT_NUM_ROWS) {
     terminal_scrollback();
@@ -82,42 +82,28 @@ void terminal_putchar(char ch) {
   }
 }
 
-void terminal_write(const char *str) {
+void terminal::write(const char *str) {
   for (; *str != '\0'; ++str) {
-    terminal_putchar(*str);
+    terminal::putchar(*str);
   }
 }
 
-void terminal_print_64bit_unsigned(uint64_t value, const char *alphabet) {
+static void terminal_print_hex(uint64_t value) {
+  terminal::write("0x");
   bool seen_nonzero = false;
   for (int divisor = 60; divisor >= 0; divisor -= 4) {
     uint64_t digit_idx = (value >> divisor) & 0xf;
     if (digit_idx > 0 || seen_nonzero) {
-      terminal_putchar(alphabet[digit_idx]);
+      terminal::putchar("0123456789abcdef"[digit_idx]);
       seen_nonzero = true;
     }
   }
   if (!seen_nonzero) {
-    terminal_putchar('0');
+    terminal::putchar('0');
   }
 }
 
-void terminal_print_hex(uint64_t value) {
-  terminal_write("0x");
-  bool seen_nonzero = false;
-  for (int divisor = 60; divisor >= 0; divisor -= 4) {
-    uint64_t digit_idx = (value >> divisor) & 0xf;
-    if (digit_idx > 0 || seen_nonzero) {
-      terminal_putchar("0123456789abcdef"[digit_idx]);
-      seen_nonzero = true;
-    }
-  }
-  if (!seen_nonzero) {
-    terminal_putchar('0');
-  }
-}
-
-void terminal_print_dec_unsigned(uint64_t value, int min_length UNUSED) {
+static void terminal_print_dec_unsigned(uint64_t value, int min_length UNUSED) {
   bool seen_nonzero = false;
   min_length = min_length <= 0 ? 1 : min_length;
   uint64_t min_length_cmp = 1;
@@ -127,25 +113,25 @@ void terminal_print_dec_unsigned(uint64_t value, int min_length UNUSED) {
   for (uint64_t divisor = 10000000000000000000ull; divisor > 0; divisor /= 10) {
     uint64_t digit_idx = (value / divisor) % 10;
     if (digit_idx > 0 || seen_nonzero || divisor < min_length_cmp) {
-      terminal_putchar('0' + digit_idx);
+      terminal::putchar('0' + digit_idx);
       seen_nonzero = true;
     }
   }
   if (!seen_nonzero) {
-    terminal_putchar('0');
+    terminal::putchar('0');
   }
 }
 
-void terminal_print_dec_signed(int64_t value, int min_length) {
+static void terminal_print_dec_signed(int64_t value, int min_length) {
   // TODO: we don't handle MIN_INT
   if (value < 0) {
-    terminal_putchar('-');
+    terminal::putchar('-');
     value = -value;
   }
   terminal_print_dec_unsigned(value, min_length);
 }
 
-void terminal_printf(const char *format, ...) {
+void terminal::printf(const char *format, ...) {
   va_list params;
   va_start(params, format);
 
@@ -156,13 +142,13 @@ void terminal_printf(const char *format, ...) {
     char ch = *format;
     if (ch == '%') {
       if (got_percent) {
-        terminal_putchar('%');
+        terminal::putchar('%');
       }
       got_percent = !got_percent;
       continue;
     }
     if (!got_percent) {
-      terminal_putchar(ch);
+      terminal::putchar(ch);
       continue;
     }
     if (got_zero && ch >= '0' && ch <= '9') {
@@ -175,7 +161,7 @@ void terminal_printf(const char *format, ...) {
         break;
       case 's': {
         auto arg = va_arg(params, const char *);
-        terminal_write(arg);
+        terminal::write(arg);
         got_percent = false;
         break;
       }
@@ -192,7 +178,7 @@ void terminal_printf(const char *format, ...) {
         break;
       }
       default:
-        terminal_putchar(ch);
+        terminal::putchar(ch);
         got_percent = false;
     }
     if (!got_percent) {
@@ -204,7 +190,7 @@ void terminal_printf(const char *format, ...) {
   va_end(params);
 }
 
-void terminal_clear() {
+void terminal::clear() {
   auto &elem = cursor_state_stack[cursor_state_stack_idx];
   elem.x = 0;
   elem.y = 0;
