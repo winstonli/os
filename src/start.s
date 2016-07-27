@@ -917,7 +917,6 @@ align 0x200000
 stack:
 page_table:
 .l3_ident:
-  resb 0x1000
   resb STACK_SIZE - STACK_RESERVED
 .l2:
   resb 0x1000
