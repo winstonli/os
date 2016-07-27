@@ -57,8 +57,8 @@ static void pit_start_counter(uint16_t freq, uint8_t counter_id,
   // set pit mode, access mode and counter to be used
   out<uint8_t>(PIT_CMD_REG, cmd);
 
-  out<uint8_t>(PIT_CHAN0_REG, static_cast<uint8_t>(freq_divisor & 0xff));
-  out<uint8_t>(PIT_CHAN0_REG, static_cast<uint8_t>((freq_divisor >> 8) & 0xff));
+  out<uint8_t>(PIT_CHAN0_REG + counter_id, (freq_divisor & 0xff));
+  out<uint8_t>(PIT_CHAN0_REG + counter_id, ((freq_divisor >> 8) & 0xff));
 }
 
 void pit::init() {
