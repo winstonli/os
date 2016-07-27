@@ -285,11 +285,47 @@ pm32_check_long_mode_supported:
   call pm32_putstr
   jmp hang
 
+pm32_max:
+  cmp ecx, edx
+  jl .lt
+  mov eax, ecx
+  ret
+.lt:
+  mov eax, edx
+  ret
+
+; e.g. 9 % 5 = 4
+; ecx = 5
+; edx = 9
+; eax = 4 (result)
+pm32_mod:
+  mov eax, edx
+  xor edx, edx
+  div ecx
+  mov eax, edx
+  ret
+
+; edx = addr
+; ecx = sz
+pm32_align_up:
+  mov esi, ecx
+  mov edi, edx
+  call pm32_mod
+  cmp eax, 0
+  jz .aligned
+  sub edi, eax
+  add edi, esi
+  mov eax, edi
+  ret
+.aligned:
+  mov eax, edi
+  ret
 
 ; TODO: we should really have some kind of guard to ensure this does not
 ; accidentally overflow into somewhere important!
 ; We have 3 page tables (1 KiB each) at the top of the stack
-STACK_SIZE equ 0x80000 - 3 * 0x1000
+STACK_SIZE equ 0x1000000
+STACK_RESERVED equ 0x3 * 0x1000
 
 ; the value of eax when we get control of the machine from grub (see 3.3)
 MULTIBOOT_EXPECTED_MAGIC equ 0x36d76289
@@ -298,7 +334,7 @@ MULTIBOOT_EXPECTED_MAGIC equ 0x36d76289
 ;; ENTRY POINT ;;
 ;;;;;;;;;;;;;;;;;
 start:
-  mov esp, stack + STACK_SIZE ; setup stack
+  mov esp, stack + STACK_SIZE - STACK_RESERVED ; setup stack
 
   ; state of the machine at this point: (see section 3.3 for more details)
   ; eax contains multiboot magic value (MULTIBOOT_EXPECTED_MAGIC)
@@ -483,23 +519,15 @@ PAGE_PS equ 1 << 7
 ; once the higher half addressing is activated (equiv. to -2 GiB unsigned)
 HIGH_ADDR_OFFSET equ 0xffffffff80000000
 
-  mov edi, page_table.l4
-  mov cr3, edi ; c3 takes the physical base of the PML4
-
-  mov ecx, empty_str
-  call pm32_putstrln
-  mov edx, page_table.l4
-  call pm32_puthex
-
-  mov ecx, empty_str
-  call pm32_putstrln
-  mov edx, stack
-  call pm32_puthex
-
-  mov ecx, empty_str
-  call pm32_putstrln
-  mov edx, page_table.l2
-  call pm32_puthex
+  mov ecx, link_kernel_end
+  mov edx, module.mod_end
+  call pm32_max
+  mov ecx, 0x200000
+  mov edx, eax
+  call pm32_align_up
+  mov ecx, 0x200000
+  cdq
+  div ecx
 
   ; Set up an identity mapping, so that later we can set up the real mapping
   ; (with the identity mapping still existing) so that we can swap the rip and
@@ -510,15 +538,30 @@ HIGH_ADDR_OFFSET equ 0xffffffff80000000
   ; We place the level 3 table at the bottom of the stack. This is the table
   ; that indexes the bits responsible for giving us an identity mapping
   ; It's the only table we have to change to get our -2 GiB mapping
-  mov edi, stack
+
+  mov edi, page_table.l2
+  mov esi, PAGE_PS | PAGE_WRITABLE | PAGE_PRESENT
+  mov ecx, 0x8
+  mul ecx
+  add eax, page_table.l2
+.set_l2e_next:
+  mov dword [edi], esi
+  add edi, 0x8
+  add esi, 0x200000
+  cmp edi, eax
+  jl .set_l2e_next
+
+  mov edi, page_table.l3_ident
+  mov esi, page_table.l2
+  or esi, PAGE_WRITABLE | PAGE_PRESENT
+  mov dword [edi], esi
+
+  mov edi, page_table.l3_ident
   or edi, PAGE_WRITABLE | PAGE_PRESENT
   mov dword [page_table.l4], edi
 
-  mov edi, page_table.l2
-  or edi, PAGE_WRITABLE | PAGE_PRESENT
-  mov dword [stack], edi
-
-  mov dword [page_table.l2], PAGE_PS | PAGE_WRITABLE | PAGE_PRESENT
+  mov edi, page_table.l4
+  mov cr3, edi ; c3 takes the physical base of the PML4
 
   ; now we set up PAE (physical address extension) by setting bit 5
   ; of control register 4
@@ -537,6 +580,17 @@ HIGH_ADDR_OFFSET equ 0xffffffff80000000
   mov eax, cr0
   or eax, 1 << 31
   mov cr0, eax ; paging is enabled as soon as this register is set
+
+  mov ecx, 0x200000
+  mov edx, [module.mod_end]
+  call pm32_align_up
+  mov esi, eax
+  mov ecx, empty_str
+  call pm32_putstrln
+  mov ecx, empty_str
+  call pm32_putstrln
+  mov edx, esi
+  call pm32_puthex
 
 %ifdef DEBUG
   ; debug: tell the user we've set up paging
@@ -662,6 +716,7 @@ realm64: ; from here on we are officially (like, actually) in long mode!
   ; converted simply by subtracting 2GiB = 0x8000'0000 (aka. HIGH_ADDR_OFFSET)
   ; this means we want P4[0x1ff] (the final entry) to point to P3_HIGH
   ; and P3_HIGH[0x1fe] to P2_HIGH
+
   mov rdi, page_table.l3
   or rdi, PAGE_WRITABLE | PAGE_PRESENT
   mov qword [page_table.l4 + 8 * 0x1ff], rdi
@@ -669,6 +724,11 @@ realm64: ; from here on we are officially (like, actually) in long mode!
   mov rdi, page_table.l2
   or rdi, PAGE_WRITABLE | PAGE_PRESENT
   mov qword [page_table.l3 + 8 * 0x1fe], rdi
+
+  mov rcx, empty_str
+  call lm64_putstrln
+  mov rdx, rsp
+  call lm64_puthex
 
   ; add HIGH_ADDR_OFFSET to rsp and rip
   ; we set rip by adding HIGH_ADDR_OFFSET to the below label
@@ -790,6 +850,8 @@ empty_str:
 
 current_line:
   dq 0
+kernel_num_pages_2m:
+  dd 0
 
 module:
 .type:
@@ -849,12 +911,14 @@ section .bss
 ; page tables must be page aligned. Let's align all 4 2 MiB pages of the stack,
 ; minus 3 4 KiB chunks for the page tables
 
-align 0x20000
+align 0x200000
 
 ; reserve us some stack space
 stack:
-  resb STACK_SIZE
 page_table:
+.l3_ident:
+  resb 0x1000
+  resb STACK_SIZE - STACK_RESERVED
 .l2:
   resb 0x1000
 .l3:
