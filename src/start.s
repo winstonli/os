@@ -325,6 +325,7 @@ pm32_align_up:
 ; accidentally overflow into somewhere important!
 ; We have 3 page tables (1 KiB each) at the top of the stack
 STACK_SIZE equ 0x1000000
+STACK_RESERVED equ 0x3 * 0x1000
 
 ; the value of eax when we get control of the machine from grub (see 3.3)
 MULTIBOOT_EXPECTED_MAGIC equ 0x36d76289
@@ -333,7 +334,7 @@ MULTIBOOT_EXPECTED_MAGIC equ 0x36d76289
 ;; ENTRY POINT ;;
 ;;;;;;;;;;;;;;;;;
 start:
-  mov esp, stack + STACK_SIZE - 0x1000 ; setup stack
+  mov esp, stack + STACK_SIZE - STACK_RESERVED ; setup stack
 
   ; state of the machine at this point: (see section 3.3 for more details)
   ; eax contains multiboot magic value (MULTIBOOT_EXPECTED_MAGIC)
@@ -527,7 +528,6 @@ HIGH_ADDR_OFFSET equ 0xffffffff80000000
   mov ecx, 0x200000
   cdq
   div ecx
-  mov [kernel_num_pages_2m], eax
 
   ; Set up an identity mapping, so that later we can set up the real mapping
   ; (with the identity mapping still existing) so that we can swap the rip and
@@ -539,21 +539,15 @@ HIGH_ADDR_OFFSET equ 0xffffffff80000000
   ; that indexes the bits responsible for giving us an identity mapping
   ; It's the only table we have to change to get our -2 GiB mapping
 
-  mov edi, page_table.l4
-  mov cr3, edi ; c3 takes the physical base of the PML4
-
-  mov edi, page_table.l3_ident
-  or edi, PAGE_WRITABLE | PAGE_PRESENT
-  mov dword [page_table.l4], edi
-
   mov edi, page_table.l2
-  mov eax, [kernel_num_pages_2m]
+  mov esi, PAGE_PS | PAGE_WRITABLE | PAGE_PRESENT
   mov ecx, 0x8
   mul ecx
   add eax, page_table.l2
 .set_l2e_next:
-  mov dword [edi], PAGE_PS | PAGE_WRITABLE | PAGE_PRESENT
+  mov dword [edi], esi
   add edi, 0x8
+  add esi, 0x200000
   cmp edi, eax
   jl .set_l2e_next
 
@@ -561,6 +555,13 @@ HIGH_ADDR_OFFSET equ 0xffffffff80000000
   mov esi, page_table.l2
   or esi, PAGE_WRITABLE | PAGE_PRESENT
   mov dword [edi], esi
+
+  mov edi, page_table.l3_ident
+  or edi, PAGE_WRITABLE | PAGE_PRESENT
+  mov dword [page_table.l4], edi
+
+  mov edi, page_table.l4
+  mov cr3, edi ; c3 takes the physical base of the PML4
 
   ; now we set up PAE (physical address extension) by setting bit 5
   ; of control register 4
@@ -596,7 +597,6 @@ HIGH_ADDR_OFFSET equ 0xffffffff80000000
   mov ecx, paging_set_up_str
   call pm32_putstrln
 %endif
-  jmp $
 
   ; So supposedly at this point we are actually in long mode, however
   ; we have one last thing to set up in the form of a global descriptor table
@@ -716,6 +716,7 @@ realm64: ; from here on we are officially (like, actually) in long mode!
   ; converted simply by subtracting 2GiB = 0x8000'0000 (aka. HIGH_ADDR_OFFSET)
   ; this means we want P4[0x1ff] (the final entry) to point to P3_HIGH
   ; and P3_HIGH[0x1fe] to P2_HIGH
+
   mov rdi, page_table.l3
   or rdi, PAGE_WRITABLE | PAGE_PRESENT
   mov qword [page_table.l4 + 8 * 0x1ff], rdi
@@ -723,6 +724,11 @@ realm64: ; from here on we are officially (like, actually) in long mode!
   mov rdi, page_table.l2
   or rdi, PAGE_WRITABLE | PAGE_PRESENT
   mov qword [page_table.l3 + 8 * 0x1fe], rdi
+
+  mov rcx, empty_str
+  call lm64_putstrln
+  mov rdx, rsp
+  call lm64_puthex
 
   ; add HIGH_ADDR_OFFSET to rsp and rip
   ; we set rip by adding HIGH_ADDR_OFFSET to the below label
@@ -910,12 +916,12 @@ align 0x200000
 ; reserve us some stack space
 stack:
 page_table:
-.l2:
-  resb 0x1000 * 256
 .l3_ident:
   resb 0x1000
-.l4:
+  resb STACK_SIZE - STACK_RESERVED
+.l2:
   resb 0x1000
-  resb STACK_SIZE - 0x1000 * 258
 .l3:
+  resb 0x1000
+.l4:
   resb 0x1000
