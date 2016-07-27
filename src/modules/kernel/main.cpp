@@ -20,23 +20,11 @@
 // entry point of 64-bit kernel proper, as jumped to from entry.s
 extern "C" void kernel_main(const uint32_t multiboot_magic,
                             void *multiboot_data) {
-  terminal_init();
+  terminal::init();
 
-  terminal_push_cursor_state(79, 24, terminal_colour_t::WHITE,
-                             terminal_colour_t::RED);
-  terminal_putchar('.');
-  terminal_pop_cursor_state();
+  assert(multiboot_magic == MULTIBOOT2_BOOTLOADER_MAGIC);
 
-  terminal_push_cursor_state(4, 10, terminal_colour_t::RED,
-                             terminal_colour_t::BLACK);
-  if (multiboot_magic != MULTIBOOT2_BOOTLOADER_MAGIC) {
-    terminal_printf("Expected magic value of %x but got %x instead!\n",
-                    MULTIBOOT2_BOOTLOADER_MAGIC, multiboot_magic);
-  }
-  terminal_pop_cursor_state();
-
-  terminal_push_cursor_state(0, 19, terminal_colour_t::GREEN,
-                             terminal_colour_t::BLACK);
+  terminal::push_cursor_state(0, 19, terminal::colour_t::GREEN);
   klog(
       "Welcome to os blah blah blah blah blah blah blah blah "
       "blahhhhhhh...george you've done this line wrapping beautifully");

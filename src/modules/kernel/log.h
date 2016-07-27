@@ -12,35 +12,32 @@
 #define klog(msg, ...) klog_info(msg, ##__VA_ARGS__)
 
 #define klog_debug(msg, ...) \
-  klog_colour("DEBUG", terminal_colour_t::LIGHT_GREEN, msg, ##__VA_ARGS__)
+  klog_colour("DEBUG", terminal::colour_t::LIGHT_GREEN, msg, ##__VA_ARGS__)
 
 #define klog_info(msg, ...) \
-  klog_colour("INFO", terminal_colour_t::WHITE, msg, ##__VA_ARGS__)
+  klog_colour("INFO", terminal::colour_t::WHITE, msg, ##__VA_ARGS__)
 
 #define klog_warn(msg, ...) \
-  klog_colour("WARN", terminal_colour_t::LIGHT_RED, msg, ##__VA_ARGS__)
+  klog_colour("WARN", terminal::colour_t::LIGHT_RED, msg, ##__VA_ARGS__)
 
 #define klog_err(msg, ...) \
-  klog_colour("ERROR", terminal_colour_t::RED, msg, ##__VA_ARGS__)
+  klog_colour("ERROR", terminal::colour_t::RED, msg, ##__VA_ARGS__)
 
 #define klog_crit(msg, ...) \
-  klog_colour("CRITICAL", terminal_colour_t::BLUE, msg, ##__VA_ARGS__)
+  klog_colour("CRITICAL", terminal::colour_t::BLUE, msg, ##__VA_ARGS__)
 
 #define klog_colour(loglevel, colour, msg, ...)                                \
   do {                                                                         \
-    terminal_set_colour(terminal_colour_t::LIGHT_GRAY,                         \
-                        terminal_colour_t::BLACK);                             \
-    terminal_printf("[");                                                      \
-    terminal_set_colour(terminal_colour_t::GREEN, terminal_colour_t::BLACK);   \
-    terminal_printf("%s:%d", string_util::find_last(__FILE__, '/'), __LINE__); \
-    terminal_set_colour(terminal_colour_t::LIGHT_GRAY,                         \
-                        terminal_colour_t::BLACK);                             \
-    terminal_printf("]");                                                      \
-    terminal_set_colour(colour, terminal_colour_t::BLACK);                     \
-    terminal_printf(" " loglevel " ");                                         \
-    terminal_set_colour(terminal_colour_t::LIGHT_GRAY,                         \
-                        terminal_colour_t::BLACK);                             \
-    terminal_printf(msg "\n", ##__VA_ARGS__);                                  \
+    terminal::set_colour(terminal::colour_t::LIGHT_GRAY);                        \
+    terminal::printf("[");                                                      \
+    terminal::set_colour(terminal::colour_t::GREEN);                             \
+    terminal::printf("%s:%d", string_util::find_last(__FILE__, '/'), __LINE__); \
+    terminal::set_colour(terminal::colour_t::LIGHT_GRAY);                        \
+    terminal::printf("]");                                                      \
+    terminal::set_colour(colour);                                               \
+    terminal::printf(" " loglevel " ");                                         \
+    terminal::set_colour(terminal::colour_t::LIGHT_GRAY);                        \
+    terminal::printf(msg "\n", ##__VA_ARGS__);                                  \
   } while (false)
 
 #define klog_clear()  \

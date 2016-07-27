@@ -19,7 +19,7 @@ STATIC void (*handlers[MAX_HANDLERS])(const registers_t *);
 STATIC uint8_t handler_count;
 
 static void pit_handler(const registers_t *regs) {
-  terminal_putchar('.');
+  terminal::putchar('.');
 
   for (uint8_t i = 0; i < handler_count; ++i) {
     handlers[i](regs);
