@@ -25,4 +25,8 @@ public:
   /* Same as get_entry_paddr, except for the vaddr. */
   static void *get_entry_vaddr(const void *entry_ptr);
 
+  static void set_entry_paddr(void *entry_ptr, void *paddr);
+
+  static void set_entry_vaddr(void *entry_ptr, void *vaddr);
+
 };

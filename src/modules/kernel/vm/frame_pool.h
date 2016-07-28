@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <cstring>
 
 #include <boot/multiboot_info.h>
 #include <vm/vm.h>
@@ -14,6 +15,8 @@ class frame_pool {
 
   /* The highest available physical address in a frame. */
   void *maxmem;
+
+  size_t avail_mem;
   /*
      The total number of 512g frames available on the system.
 
@@ -102,7 +105,63 @@ public:
   frame_pool &operator=(frame_pool &&) = delete;
   ~frame_pool() = default;
 
+  /*
+     Functions to permanently allocate frames.
+
+     Frames allocated by these functions MUST NOT be returned.
+
+     These will not trigger dynamic allocation and are safe to use from memory
+     allocators.
+   */
+  void *falloc_perm_4k();
+  void *falloc_perm_2m();
+  void *falloc_perm_1g();
+
+  /*
+     Functions to allocate frames without triggering dynamic allocation, and are
+     safe to use from memory allocators that may cause recursive frame
+     allocation.
+
+     The corresponding index() function MUST be called afterwards, which can
+     trigger dynamic allocation. Generally, a memory allocator will call
+     falloc_critical() when it needs more memory, and then falloc_index() when
+     it has updated its free lists.
+
+     Regular falloc/ffree calls MUST NOT be called before all matching index()
+     functions are called.
+
+     It is safe for falloc_index() to trigger another falloc_critical() call
+     due to dynamic allocation, as long as the memory allocator is re-entrant.
+   */
+  void *falloc_critical_4k();
+  void *falloc_critical_2m();
+  void *falloc_critical_1g();
+
+  void *falloc_index_4k();
+  void *falloc_index_2m();
+  void *falloc_index_1g();
+
+  void *ffree_critical_4k();
+  void *ffree_critical_2m();
+  void *ffree_critical_1g();
+
+  void *ffree_index_4k();
+  void *ffree_index_2m();
+  void *ffree_index_1g();
+
+  /*
+     General functions for allocating frames.
+   */
+  void *falloc_4k();
+  void *falloc_2m();
+  void *falloc_1g();
+
+  void *ffree_4k();
+  void *ffree_2m();
+  void *ffree_1g();
+
   void *get_maxmem() const;
+  size_t get_avail_mem() const;
 
 private:
 
@@ -162,6 +221,7 @@ private:
       char *bitmaps = static_cast<char *>(
           vm::paddr_to_vaddr(reinterpret_cast<char *>(start_2m))
       );
+      memset(bitmaps, 0, size);
       frames_2m_bits = reinterpret_cast<uint64_t *>(bitmaps);
       counts_2m = reinterpret_cast<int8_t *>(bitmaps + offsets[0]);
       size_2m_bits = offsets[1] - offsets[0];
