@@ -1,13 +1,11 @@
 #pragma once
 
-#include <boot/multiboot_info.h>
-#include <vm/frame_pool.h>
 #include <vm/page_table.h>
-#include <vm/pager.h>
 
 class vm {
 
   static constexpr uint64_t direct_virtual_offset = 0xffff'8800'0000'0000;
+  static constexpr uint64_t pt_offset = 0xffff'ea00'0000'0000;
   static constexpr uint64_t kernel_offset = 0xffff'ffff'8000'0000;
 
 public:
@@ -16,23 +14,6 @@ public:
   static constexpr uint64_t pgsz_2m = page_table::num_entries * pgsz_4k;
   static constexpr uint64_t pgsz_1g = page_table::num_entries * pgsz_2m;
   static constexpr uint64_t pgsz_512g = page_table::num_entries * pgsz_1g;
-
-private:
-
-  frame_pool frpool;
-  pager p;
-
-public:
-
-  vm(
-      const multiboot_info &multiboot,
-      void *start_mod_start,
-      void *start_mod_end,
-      void *kern_mod_start,
-      void *kern_mod_end
-  );
-
-public:
 
   template<typename T>
   static T *align_up(T *addr, uintptr_t sz) {
@@ -50,13 +31,32 @@ public:
     return reinterpret_cast<char *>(num * sz);
   }
 
-  static void *paddr_to_kvaddr(void *paddr);
-
-  static void *kvaddr_to_paddr(void *kvaddr);
+  /*
+     These functions translate between physical addresses and
+     addresses in the direct virtual mapping (direct_virtual_offset).
+   */
 
   static void *paddr_to_vaddr(void *paddr);
 
   static void *vaddr_to_paddr(void *vaddr);
+
+  /*
+     These functions translate between physical addresses and
+     addresses in the page table space (pt_offset).
+   */
+
+  static void *paddr_to_ptvaddr(void *paddr);
+
+  static void *ptvaddr_to_paddr(void *ptvaddr);
+
+  /*
+     These functions translate between physical addresses and
+     addresses in the kernel .text space (kernel_offset).
+   */
+
+  static void *paddr_to_kvaddr(void *paddr);
+
+  static void *kvaddr_to_paddr(void *kvaddr);
 
   template<typename T>
   static T *align_up_4k(T *addr) {
@@ -97,5 +97,9 @@ public:
   static T *align_down_512g(T *addr) {
     return align_down(addr, pgsz_512g);
   }
+
+  static uintptr_t num_frames(uintptr_t num_bytes, uintptr_t sz);
+
+  static uintptr_t num_frames_2m(uintptr_t num_bytes);
 
 };

@@ -1,11 +1,11 @@
 #pragma once
 
 #include <boot/multiboot_info.h>
-#include <vm/vm.h>
+#include <vm/memory_manager.h>
 
 class kernel {
 
-  vm vm;
+  memory_manager mem;
 
 public:
 

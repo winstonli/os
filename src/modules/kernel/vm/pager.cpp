@@ -15,6 +15,7 @@ pager::pager(frame_pool &frpool) : pt(find_page_table()), frpool(frpool) {
 
 void pager::init_direct_mapping() {
   void *maxmem = frpool.get_maxmem();
+  assert(maxmem != nullptr);
   klog("max addressible memory: %x", maxmem);
   uintptr_t total_2m_pages =
       reinterpret_cast<uintptr_t>(vm::align_up_2m(maxmem)) / vm::pgsz_2m;
@@ -30,10 +31,16 @@ void pager::init_direct_mapping() {
   klog("pt3[0] = %x", pt->e4_arr[0x110].get_pdp()[0]);
   pdpe *pt3 = pt->e4_arr[0x110].get_pdp();
   pde *pt2_kern0 = pt3[0].get_pd();
+  /* Let's map everything in the first 512 GiB because we have the first
+     L3 page table and L2 page table allocated already */
   for (auto i = 0u; i < std::min(0x200ul, total_2m_pages); ++i) {
     pt2_kern0[i].set(vm::pgsz_2m * i | pde::bit_p | pde::bit_rw | pde::bit_ps);
   }
-  for (auto i = 1u; i < total_1g_pages; ++i) {
+  if (total_1g_pages == 1) {
+    return;
+  }
+  // void *first_1g = frpool.falloc_2m_critical();
+  for (auto i = 1u; i < std::min(0x200ul, total_1g_pages); ++i) {
   }
   *static_cast<int64_t *>(
       vm::paddr_to_vaddr(reinterpret_cast<void *>(0x1ff * 0x200000))) = 15;

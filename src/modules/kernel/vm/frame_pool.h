@@ -3,6 +3,7 @@
 #include <cstdint>
 
 #include <boot/multiboot_info.h>
+#include <vm/vm.h>
 
 class frame_pool {
 
@@ -52,15 +53,6 @@ class frame_pool {
   uint64_t *frames_1g_bits;
 
   /*
-     Pointer to a bitmap of available 2 MiB frames.
-
-     Number of bits = total_512g_frames * 512 * 512
-
-     Size will be between 32 KiB and 16 MiB
-   */
-  uint64_t *frames_2m_bits;
-
-  /*
      Pointer to an array of counts, where each element i in the array
      corresponds to the number of available 1 GiB frames out of the 64 frames
      starting at index 64 * i.
@@ -71,6 +63,17 @@ class frame_pool {
    */
   int8_t *counts_1g;
 
+  size_t size_1g_bits;
+
+  /*
+     Pointer to a bitmap of available 2 MiB frames.
+
+     Number of bits = total_512g_frames * 512 * 512
+
+     Size will be between 32 KiB and 16 MiB
+   */
+  uint64_t *frames_2m_bits;
+
   /*
      As counts_1g, but for 2 MiB frames.
 
@@ -79,6 +82,10 @@ class frame_pool {
      Size will be between 4 KiB to 2 MiB
    */
   int8_t *counts_2m;
+
+  size_t size_2m_bits;
+
+  fixedsize_vector<void *, 0x1000> freelist_4k;
 
 public:
 
@@ -100,6 +107,80 @@ public:
 private:
 
   /*
+     Calculates the number of 2 MiB frames required for the bitmaps.
+
+     Looks for enough 2 MiB frames in the initial memory map that are under
+     1 GiB (all that we've direct-mapped at this point) and allocates them.
+   */
+  template<size_t N>
+  void allocate_bitmaps(
+      fixedsize_vector<multiboot_mmap_entry, N> &chunks,
+      const fixedsize_vector<pair<void *, void*>, 2> &reserved
+  ) {
+    std::array<size_t, 3> offsets;
+    auto size = calc_bitmap_size_aligned(offsets);
+    for (auto i = 0u; i < chunks.size(); ++i) {
+      auto &e = chunks[i];
+      auto &start = e.addr;
+      auto &len = e.len;
+      char *const start_addr = reinterpret_cast<char *>(start);
+      /* Not big enough. */
+      if (len < size) {
+        continue;
+      }
+      /* Find a big enough chunk without splitting a larger frame. */
+      auto end = start_addr + len;
+      auto start_2m = vm::align_up_2m(start_addr);
+      if (start_2m == vm::align_up_1g(start_addr)) {
+        /* We don't want to split a larger frame. */
+        continue;
+      }
+      if (start_2m + size >= end) {
+        /* This frame isn't big enough. */
+        continue;
+      }
+      if (start_2m >= reinterpret_cast<char *>(vm::pgsz_1g)) {
+        /* This frame is past the mapped region. */
+        continue;
+      }
+      /* Found our frame. */
+      auto end_bitmaps = start_2m + size;
+      if (start_2m == start_addr) {
+        start = reinterpret_cast<uintptr_t>(end_bitmaps);
+        len = reinterpret_cast<uintptr_t>(end) - start;
+      } else {
+        /* We have 4k frames below us. We need to split them. */
+        assert(start_2m > start_addr);
+        len = start_2m - start_addr;
+        if (end > end_bitmaps) {
+          multiboot_mmap_entry e;
+          e.addr = reinterpret_cast<uintptr_t>(end_bitmaps);
+          e.len = end - end_bitmaps;
+          chunks.push_back(std::move(e));
+        }
+      }
+      char *bitmaps = static_cast<char *>(
+          vm::paddr_to_vaddr(reinterpret_cast<char *>(start_2m))
+      );
+      frames_2m_bits = reinterpret_cast<uint64_t *>(bitmaps);
+      counts_2m = reinterpret_cast<int8_t *>(bitmaps + offsets[0]);
+      size_2m_bits = offsets[1] - offsets[0];
+      frames_1g_bits = reinterpret_cast<uint64_t *>(bitmaps + offsets[1]);
+      counts_1g = reinterpret_cast<int8_t *>(bitmaps + offsets[2]);
+      size_1g_bits = size - offsets[2];
+      return;
+    }
+    assertf(
+        false,
+        "Unable to allocate frame pool bitmaps." " "
+        "No chunks of memory below 1 GiB with trailing 2 MiB frames."
+    );
+  }
+
+  void set_index_2m(size_t index);
+  void set_index_1g(size_t index);
+
+  /*
      Grub does not include the memory used by our modules in the memory map.
      So we have to further partition the chunks from grub :(
    */
@@ -109,9 +190,32 @@ private:
       const fixedsize_vector<pair<void *, void*>, 2> &reserved
   );
 
+  void update_maxmem(const multiboot_mmap_entry &chunk);
+
   void add_memory_chunk(const multiboot_mmap_entry &chunk);
   void add_frame_4k(void *frame);
   void add_frame_2m(void *frame);
   void add_frame_1g(void *frame);
+
+  /*
+     Places the required offsets of, respectively:
+
+     counts_2m
+     frames_1g_bits
+     counts_1g
+
+     into offsets, and returns the total count.
+
+     The offset of frames_2m_bits is 0.
+   */
+  size_t calc_bitmap_size_aligned(std::array<size_t, 3> &offsets) const;
+
+  size_t sizeof_2m_bitmap() const;
+
+  size_t sizeof_2m_counts() const;
+
+  size_t sizeof_1g_bitmap() const;
+
+  size_t sizeof_1g_counts() const;
 
 };
