@@ -166,6 +166,7 @@ void terminal::printf(const char *format, ...) {
 
   bool got_percent = false;
   bool got_zero = false;
+  bool got_large = false;
   int zero_extend = 0;
   for (; *format != '\0'; ++format) {
     char ch = *format;
@@ -188,6 +189,9 @@ void terminal::printf(const char *format, ...) {
       case '0':
         got_zero = true;
         break;
+      case 'z':
+        got_large = true;
+        break;
       case 's': {
         auto arg = va_arg(params, const char *);
         terminal::write(arg);
@@ -201,17 +205,14 @@ void terminal::printf(const char *format, ...) {
         break;
       }
       case 'd': {
-        auto arg = va_arg(params, int32_t);
-        terminal_print_dec_signed(arg, zero_extend);
-        got_percent = false;
-        break;
-      }
-      case 'z': {
-        if (format[1] == 'd' && format[2] != '\0') {
-          auto arg = va_arg(params, size_t);
+        if (got_large) {
+          auto arg = va_arg(params, int64_t);
           terminal_print_dec_signed(arg, zero_extend);
-          ++format;
+        } else {
+          auto arg = va_arg(params, int32_t);
+          terminal_print_dec_signed(arg, zero_extend);
         }
+        got_percent = false;
         break;
       }
       default:
