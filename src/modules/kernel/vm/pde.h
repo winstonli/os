@@ -5,11 +5,16 @@
 #include <vm/pte.h>
 
 /*
-
-   Class representing a level 2 page directory entry (pde).
-
+   Struct representing a level 2 page directory entry (pde).
  */
-class PACKED pde {
+struct PACKED pde {
+
+  static constexpr uint64_t bit_p = 1 << 0;
+
+  static constexpr uint64_t bit_rw = 1 << 1;
+
+  static constexpr uint64_t bit_ps = 1 << 7;
+
   /*
      Present (P) bit:
      true = Page loaded in physical memory. (Default)
@@ -63,6 +68,7 @@ class PACKED pde {
      true = This entry is a a leaf entry, and points to a 2 MiB page.
      false = This entry points to a level 1 page table.
    */
+
   bool ps : 1;
   /*
      Only valid if the Page Size (PS) bit is set.
@@ -94,6 +100,10 @@ class PACKED pde {
   bool nx : 1;
 
  public:
+
+  void set(uint64_t bits);
+
   bool has_pt() const;
   pte *get_pt() const;
+
 };

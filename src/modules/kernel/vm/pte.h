@@ -3,11 +3,9 @@
 #include <common/common.h>
 
 /*
-
-   Class representing a level 1 page table entry (pte).
-
+   Struct representing a level 1 page table entry (pte).
  */
-class PACKED pte {
+struct PACKED pte {
   /*
      Present (P) bit:
      true = Page loaded in physical memory. (Default)
@@ -80,6 +78,6 @@ class PACKED pte {
    */
   bool nx : 1;
 
- public:
   void *get_page_paddr() const;
+
 };

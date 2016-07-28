@@ -6,8 +6,13 @@
 
 class frame_pool {
 
-private:
+  template<typename T0, typename T1>
+  using pair = std::pair<T0, T1>;
 
+  static constexpr uint64_t gib_512 = 0xff80'0000'0000;
+
+  /* The highest available physical address in a frame. */
+  void *maxmem;
   /*
      The total number of 512g frames available on the system.
 
@@ -75,14 +80,29 @@ private:
    */
   int8_t *counts_2m;
 
-  template<typename T0, typename T1>
-  using pair = std::pair<T0, T1>;
+public:
+
+  frame_pool(
+      const multiboot_info &multiboot,
+      void *start_mod_start,
+      void *start_mod_end,
+      void *kern_mod_start,
+      void *kern_mod_end 
+  );
+  frame_pool(const frame_pool &) = delete;
+  frame_pool &operator=(const frame_pool &) = delete;
+  frame_pool(frame_pool &&) = delete;
+  frame_pool &operator=(frame_pool &&) = delete;
+  ~frame_pool() = default;
+
+  void *get_maxmem() const;
+
+private:
 
   /*
      Grub does not include the memory used by our modules in the memory map.
      So we have to further partition the chunks from grub :(
    */
-
   void add_with_reserved(
       const multiboot_info &multiboot,
       /* Pairs of (start, end) addresses. */
@@ -93,22 +113,5 @@ private:
   void add_frame_4k(void *frame);
   void add_frame_2m(void *frame);
   void add_frame_1g(void *frame);
-
-public:
-
-  frame_pool();
-  frame_pool(const frame_pool &) = delete;
-  frame_pool &operator=(const frame_pool &) = delete;
-  frame_pool(frame_pool &&) = delete;
-  frame_pool &operator=(frame_pool &&) = delete;
-  ~frame_pool() = default;
-
-  static void init(const multiboot_info &multiboot, void *start_mod_start, void *start_mod_len);
-
-  static frame_pool instance;
-
-private:
-
-  static constexpr uint64_t gib_512 = 0xff80'0000'0000;
 
 };

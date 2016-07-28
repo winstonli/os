@@ -5,11 +5,9 @@
 #include <vm/pde.h>
 
 /*
-
-   Class representing a level 3 page directory pointer entry (pdpe).
-
+   Struct representing a level 3 page directory pointer entry (pdpe).
  */
-class PACKED pdpe {
+struct PACKED pdpe {
   /*
      Present (P) bit:
      true = Page loaded in physical memory. (Default)
@@ -93,6 +91,6 @@ class PACKED pdpe {
    */
   bool nx : 1;
 
- public:
   pde *get_pd() const;
+  
 };

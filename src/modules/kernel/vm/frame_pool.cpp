@@ -7,20 +7,31 @@
 #include <log.h>
 #include <vm/vm.h>
 
-/* These have type void. To get the actual addresses, take their address & */
-
-extern void *link_kern_start;
-extern void *link_kern_end;
-
-frame_pool::frame_pool()
-    : total_512g_frames(0),
+frame_pool::frame_pool(const multiboot_info &multiboot, void *start_mod_start,
+                       void *start_mod_end, void *kern_mod_start,
+                       void *kern_mod_end)
+    : maxmem(nullptr),
+      total_512g_frames(0),
       num_1g_frames(0),
       num_2m_frames(0),
       num_4k_frames(0),
       frames_1g_bits(),
       frames_2m_bits(),
       counts_1g(),
-      counts_2m() {}
+      counts_2m() {
+  fixedsize_vector<pair<void *, void *>, 2> reserved;
+  assert(start_mod_end <= kern_mod_start);
+  if (start_mod_end == kern_mod_start) {
+    reserved.emplace_back(start_mod_start, kern_mod_end);
+    add_with_reserved(multiboot, reserved);
+    return;
+  }
+  reserved.emplace_back(start_mod_start, start_mod_end);
+  reserved.emplace_back(kern_mod_start, kern_mod_end);
+  add_with_reserved(multiboot, reserved);
+}
+
+void *frame_pool::get_maxmem() const { return maxmem; }
 
 void frame_pool::add_with_reserved(
     const multiboot_info &multiboot,
@@ -47,25 +58,25 @@ void frame_pool::add_with_reserved(
         }
         chunk.addr = reinterpret_cast<multiboot_uint64_t>(res_end);
         chunk.len = end - res_end;
-        instance.add_memory_chunk(chunk);
+        add_memory_chunk(chunk);
         continue;
       }
       if (end <= res_end && end > res_start) {
         chunk.addr = reinterpret_cast<multiboot_uint64_t>(start);
         chunk.len = res_start - start;
-        instance.add_memory_chunk(chunk);
+        add_memory_chunk(chunk);
         continue;
       }
       if (start < res_start && end > res_end) {
         chunk.addr = reinterpret_cast<multiboot_uint64_t>(start);
         chunk.len = res_start - start;
-        instance.add_memory_chunk(chunk);
+        add_memory_chunk(chunk);
         chunk.addr = reinterpret_cast<multiboot_uint64_t>(res_end);
         chunk.len = end - res_end;
-        instance.add_memory_chunk(chunk);
+        add_memory_chunk(chunk);
         continue;
       }
-      instance.add_memory_chunk(e);
+      add_memory_chunk(e);
     }
   }
 }
@@ -80,6 +91,7 @@ void frame_pool::add_memory_chunk(const multiboot_mmap_entry &chunk) {
   total_512g_frames = std::max(total_512g_frames, num_512g_frames);
   char *aligned_4k = vm::align_up_4k(addr);
   char *max_4k = vm::align_down_4k(max);
+  maxmem = std::max(maxmem, static_cast<void *>(max_4k - 1));
   char *aligned_2m = vm::align_up_2m(addr);
   char *max_2m = vm::align_down_2m(max);
   char *aligned_1g = vm::align_up_1g(addr);
@@ -118,21 +130,3 @@ void frame_pool::add_frame_4k(void *frame) { ++num_4k_frames; }
 void frame_pool::add_frame_2m(void *frame) { ++num_2m_frames; }
 
 void frame_pool::add_frame_1g(void *frame) { ++num_1g_frames; }
-
-void frame_pool::init(const multiboot_info &multiboot, void *start_mod_start,
-                      void *start_mod_end) {
-  fixedsize_vector<pair<void *, void *>, 2> reserved;
-  void *kern_start = vm::kvaddr_to_paddr(static_cast<void *>(&link_kern_start));
-  void *kern_end = vm::kvaddr_to_paddr(static_cast<void *>(&link_kern_end));
-  assert(start_mod_end <= kern_start);
-  if (start_mod_end == kern_start) {
-    reserved.emplace_back(start_mod_start, kern_end);
-    instance.add_with_reserved(multiboot, reserved);
-    return;
-  }
-  reserved.emplace_back(start_mod_start, start_mod_end);
-  reserved.emplace_back(kern_start, kern_end);
-  instance.add_with_reserved(multiboot, reserved);
-}
-
-DATA frame_pool frame_pool::instance;

@@ -10,7 +10,7 @@
 #define assertf(cond, msg, ...)                                       \
   do {                                                                \
     if (unlikely(!(cond))) {                                          \
-      klog_crit("assertion failure: " #cond ", " msg, ##__VA_ARGS__); \
+      klog_crit("assertion failure: " #cond ", \"" msg "\"", ##__VA_ARGS__); \
       panic();                                                        \
     }                                                                 \
   } while (false)

@@ -4,5 +4,5 @@
 
 pde *pdpe::get_pd() const {
   return static_cast<pde *>(
-      page_table::get_entry_kvaddr(static_cast<const void *>(this)));
+      page_table::get_entry_vaddr(static_cast<const void *>(this)));
 }

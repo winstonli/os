@@ -5,11 +5,9 @@
 #include <vm/pdpe.h>
 
 /*
-
-   Class representing a level 4 page table entry (pml4e).
-
+   Struct representing a level 4 page table entry (pml4e).
  */
-class PACKED pml4e {
+struct PACKED pml4e {
   /*
      Present (P) bit:
      true = Page loaded in physical memory. (Default)
@@ -76,6 +74,6 @@ class PACKED pml4e {
    */
   bool nx : 1;
 
- public:
   pdpe *get_pdp() const;
+  
 };

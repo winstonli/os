@@ -325,7 +325,7 @@ pm32_align_up:
 ; accidentally overflow into somewhere important!
 ; We have 3 page tables (1 KiB each) at the top of the stack
 STACK_SIZE equ 0x1000000
-STACK_RESERVED equ 0x3 * 0x1000
+STACK_RESERVED equ 0x5 * 0x1000
 
 ; the value of eax when we get control of the machine from grub (see 3.3)
 MULTIBOOT_EXPECTED_MAGIC equ 0x36d76289
@@ -726,6 +726,16 @@ realm64: ; from here on we are officially (like, actually) in long mode!
   or rdi, PAGE_WRITABLE | PAGE_PRESENT
   mov qword [page_table.l3 + 8 * 0x1fe], rdi
 
+  ; also set the direct virtual mapping
+
+  mov rdi, page_table.l3_v
+  or rdi, PAGE_WRITABLE | PAGE_PRESENT
+  mov qword [page_table.l4 + 8 * 0x110], rdi
+
+  mov rdi, page_table.l2
+  or rdi, PAGE_WRITABLE | PAGE_PRESENT
+  mov qword [page_table.l3_v], rdi
+
   mov rcx, empty_str
   call lm64_putstrln
   mov rdx, rsp
@@ -807,7 +817,6 @@ realm64: ; from here on we are officially (like, actually) in long mode!
   ; the module other than its load address, we're hoping that the module has
   ; a trampoline or equivalent at the beginning of the module that will kindly
   ; redirect us to where we actually want to go.
-  ; mov dword [0xffffffff81400000], 1
   call rax
 
   ; if we return from that then all we can do is disable interrupts and hang
@@ -926,6 +935,10 @@ stack:
 page_table:
 .l3_ident:
   resb STACK_SIZE - STACK_RESERVED
+.l2_v:
+  resb 0x1000
+.l3_v:
+  resb 0x1000
 .l2:
   resb 0x1000
 .l3:

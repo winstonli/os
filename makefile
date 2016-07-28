@@ -12,7 +12,9 @@ COMMON_FLAGS += -fPIC -ffreestanding -fno-builtin \
                 -pedantic -Wshadow -Wpointer-arith -Wcast-align \
                 -Wwrite-strings -Wredundant-decls -Wno-unused-parameter \
                 -Winline -Wno-long-long -Wuninitialized \
-                -Wno-unused-private-field -Wno-gnu-zero-variadic-macro-arguments
+                -Wno-unused-private-field \
+                -Wno-gnu-zero-variadic-macro-arguments \
+                -Wno-shadow
 
 CXXFLAGS += $(COMMON_FLAGS) \
             -std=c++14 \
@@ -71,6 +73,7 @@ kernel.elf: module.ld src/modules/kernel/entry.o src/modules/kernel/main.o \
             src/modules/kernel/interrupt_stubs.o \
             src/modules/kernel/irq.o \
             src/modules/kernel/isr.o \
+            src/modules/kernel/kernel.o \
             src/modules/kernel/keyboard.o \
             src/modules/kernel/pic.o \
             src/modules/kernel/pit.o \
@@ -80,6 +83,7 @@ kernel.elf: module.ld src/modules/kernel/entry.o src/modules/kernel/main.o \
             src/modules/kernel/util/string_util.o \
             src/modules/kernel/vm/frame_pool.o \
             src/modules/kernel/vm/page_table.o \
+            src/modules/kernel/vm/pager.o \
             src/modules/kernel/vm/pallocator.o \
             src/modules/kernel/vm/pml4e.o \
             src/modules/kernel/vm/pdpe.o \
