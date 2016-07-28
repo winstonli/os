@@ -104,6 +104,7 @@ struct PACKED pde {
   void set(uint64_t bits);
 
   bool has_pt() const;
+  void *get_base_paddr() const;
   pte *get_pt() const;
 
 };

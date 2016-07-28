@@ -206,6 +206,14 @@ void terminal::printf(const char *format, ...) {
         got_percent = false;
         break;
       }
+      case 'z': {
+        if (format[1] == 'd' && format[2] != '\0') {
+          auto arg = va_arg(params, size_t);
+          terminal_print_dec_signed(arg, zero_extend);
+          ++format;
+        }
+        break;
+      }
       default:
         terminal::putchar(ch);
         got_percent = false;

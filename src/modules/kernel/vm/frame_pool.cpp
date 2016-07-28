@@ -4,6 +4,7 @@
 #include <utility>
 
 #include <assert.h>
+#include <compiler.h>
 #include <log.h>
 #include <vm/vm.h>
 
@@ -11,6 +12,7 @@ frame_pool::frame_pool(const multiboot_info &multiboot, void *start_mod_start,
                        void *start_mod_end, void *kern_mod_start,
                        void *kern_mod_end)
     : maxmem(nullptr),
+      avail_mem(0),
       total_512g_frames(0),
       num_1g_frames(0),
       num_2m_frames(0),
@@ -34,11 +36,27 @@ frame_pool::frame_pool(const multiboot_info &multiboot, void *start_mod_start,
   add_with_reserved(multiboot, reserved);
 }
 
+void *frame_pool::falloc_perm_2m() {
+  for (auto i = 0u; i < size_2m_bits; ++i) {
+    auto &count = counts_2m[i];
+    auto &bits64 = frames_2m_bits[i];
+    if (count > 0) {
+      auto first = ctz(bits64);
+      bits64 &= ~(uint64_t(1) << first);
+      --count;
+      return reinterpret_cast<void *>(vm::pgsz_2m * (i * 64 + first));
+    }
+  }
+  assertf(false, "Failed to allocate permanent frame.");
+}
+
 void *frame_pool::get_maxmem() const { return maxmem; }
+
+size_t frame_pool::get_avail_mem() const { return avail_mem; }
 
 void frame_pool::set_index_2m(size_t index) {
   size_t arr_index = index / 64;
-  frames_2m_bits[arr_index] |= 1 << (index % 64);
+  frames_2m_bits[arr_index] |= uint64_t(1) << uint64_t(index % 64);
   ++counts_2m[arr_index];
   ++num_2m_frames;
 }
@@ -57,6 +75,7 @@ void frame_pool::add_with_reserved(
   multiboot.get_memory_map(v);
   for (auto i = 0u; i < v.size(); ++i) {
     multiboot_mmap_entry &e = v[i];
+    avail_mem += e.len;
     char *start = reinterpret_cast<char *>(e.addr);
     char *end = reinterpret_cast<char *>(start + e.len);
     for (auto j = 0u; j < reserved.size(); ++j) {

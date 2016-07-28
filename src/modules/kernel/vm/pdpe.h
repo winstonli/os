@@ -8,6 +8,13 @@
    Struct representing a level 3 page directory pointer entry (pdpe).
  */
 struct PACKED pdpe {
+
+  static constexpr uint64_t bit_p = 1 << 0;
+
+  static constexpr uint64_t bit_rw = 1 << 1;
+
+  static constexpr uint64_t bit_ps = 1 << 7;
+  
   /*
      Present (P) bit:
      true = Page loaded in physical memory. (Default)
@@ -90,6 +97,10 @@ struct PACKED pdpe {
      false = Execution allowed on this page.
    */
   bool nx : 1;
+
+  void set(uint64_t bits);
+
+  void set_pd(pde *pd);
 
   pde *get_pd() const;
   

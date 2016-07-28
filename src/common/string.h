@@ -1,8 +1,7 @@
 #pragma once
 
+#include <cstddef>
 #include <type_traits>
-
-#include <stddef.h>
 
 // zero out the given array of elements
 template <typename T>
