@@ -77,6 +77,7 @@ kernel.elf: module.ld src/modules/kernel/entry.o src/modules/kernel/main.o \
             src/modules/kernel/keyboard.o \
             src/modules/kernel/pic.o \
             src/modules/kernel/pit.o \
+            src/modules/kernel/pci.o \
             src/modules/kernel/register.o \
             src/modules/kernel/terminal.o \
             src/modules/kernel/boot/multiboot_info.o \

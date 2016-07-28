@@ -10,6 +10,7 @@
 #include <kernel.h>
 #include <keyboard.h>
 #include <log.h>
+#include <pci.h>
 #include <pic.h>
 #include <pit.h>
 #include <terminal.h>
@@ -47,6 +48,7 @@ extern "C" void kernel_main(const uint32_t multiboot_magic,
   cmos::init();
   keyboard::init();
   pic::init();
+  pci::init();
   uint64_t rip = 0;
   asm volatile("leaq (%%rip), %0" : "=r"(rip));
 
