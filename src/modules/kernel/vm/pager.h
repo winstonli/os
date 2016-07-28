@@ -15,7 +15,7 @@ public:
      All we want to do is take cr3, translate it to its direct vaddr,
      and set page_table::ptr
    */
-  pager(frame_pool &frpool);
+  pager(frame_pool &pool);
 
 private:
 

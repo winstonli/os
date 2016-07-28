@@ -9,7 +9,7 @@
 
 #include <vm/vm.h>
 
-pager::pager(frame_pool &frpool) : pt(find_page_table()), frpool(frpool) {
+pager::pager(frame_pool &pool) : pt(find_page_table()), frpool(pool) {
   init_direct_mapping();
 }
 

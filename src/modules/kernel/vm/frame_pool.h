@@ -97,7 +97,7 @@ public:
       void *start_mod_start,
       void *start_mod_end,
       void *kern_mod_start,
-      void *kern_mod_end 
+      void *kern_mod_end
   );
   frame_pool(const frame_pool &) = delete;
   frame_pool &operator=(const frame_pool &) = delete;
@@ -179,9 +179,9 @@ private:
     std::array<size_t, 3> offsets;
     auto size = calc_bitmap_size_aligned(offsets);
     for (auto i = 0u; i < chunks.size(); ++i) {
-      auto &e = chunks[i];
-      auto &start = e.addr;
-      auto &len = e.len;
+      auto &chunk = chunks[i];
+      auto &start = chunk.addr;
+      auto &len = chunk.len;
       char *const start_addr = reinterpret_cast<char *>(start);
       /* Not big enough. */
       if (len < size) {
@@ -212,10 +212,10 @@ private:
         assert(start_2m > start_addr);
         len = start_2m - start_addr;
         if (end > end_bitmaps) {
-          multiboot_mmap_entry e;
-          e.addr = reinterpret_cast<uintptr_t>(end_bitmaps);
-          e.len = end - end_bitmaps;
-          chunks.push_back(std::move(e));
+          multiboot_mmap_entry entry;
+          entry.addr = reinterpret_cast<uintptr_t>(end_bitmaps);
+          entry.len = end - end_bitmaps;
+          chunks.push_back(std::move(entry));
         }
       }
       char *bitmaps = static_cast<char *>(

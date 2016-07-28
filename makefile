@@ -13,8 +13,7 @@ COMMON_FLAGS += -fPIC -ffreestanding -fno-builtin \
                 -Wwrite-strings -Wredundant-decls -Wno-unused-parameter \
                 -Winline -Wno-long-long -Wuninitialized \
                 -Wno-unused-private-field \
-                -Wno-gnu-zero-variadic-macro-arguments \
-                -Wno-shadow
+                -Wno-gnu-zero-variadic-macro-arguments
 
 CXXFLAGS += $(COMMON_FLAGS) \
             -std=c++14 \
