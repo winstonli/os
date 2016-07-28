@@ -28,6 +28,7 @@ void terminal::init() {
   // TODO: we should get this port number from the bios data area
   out<uint16_t>(VGA_BASE_PORT, 0x200a);
   out<uint16_t>(VGA_BASE_PORT, 0xb);
+  clear();
 }
 
 void terminal::push_cursor_state(uint8_t x, uint8_t y, terminal::colour_t fg,

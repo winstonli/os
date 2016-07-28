@@ -529,6 +529,7 @@ HIGH_ADDR_OFFSET equ 0xffffffff80000000
   mov ecx, 0x200000
   cdq
   div ecx
+  mov eax, 0x200
 
   ; Set up an identity mapping, so that later we can set up the real mapping
   ; (with the identity mapping still existing) so that we can swap the rip and

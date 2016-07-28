@@ -26,20 +26,14 @@ extern "C" void kernel_main(const uint32_t multiboot_magic,
                             void *multiboot_data, void *start_mod_start,
                             void *start_mod_end) {
   terminal::init();
+  klog("Welcome to os");
 
   assert(multiboot_magic == MULTIBOOT2_BOOTLOADER_MAGIC);
 
-  terminal::push_cursor_state(0, 19, terminal::colour_t::GREEN);
   kernel k(*static_cast<multiboot_info *>(multiboot_data), start_mod_start,
-           start_mod_end, static_cast<void *>(&link_kern_start),
-           static_cast<void *>(&link_kern_end));
-  klog(
-      "Welcome to os blah blah blah blah blah blah blah blah "
-      "blahhhhhhh...george you've done this line wrapping beautifully");
-  klog_debug("Hello debug");
-  klog_warn("hello warn");
-  klog_err("Hello error");
-  klog_crit("Hello crit");
+           start_mod_end,
+           vm::kvaddr_to_paddr(static_cast<void *>(&link_kern_start)),
+           vm::kvaddr_to_paddr(static_cast<void *>(&link_kern_end)));
   idt::init();
   isr::init();
   irq::init();
