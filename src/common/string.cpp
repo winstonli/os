@@ -48,6 +48,24 @@ void memcpy(volatile char *dst, volatile char *src, int num_elems) {
 
 extern "C" {
 
+int memcmp(const char *s1, const char *s2, size_t n) {
+  for (; n > 0 && *s1 == *s2; --n, ++s1, ++s2)
+    ;
+  return n == 0 ? 0 : *s1 - *s2;
+}
+
+int strcmp(const char *s1, const char *s2) {
+  for (; *s1 == *s2 && *s1 != '\0'; ++s1, ++s2)
+    ;
+  return *s1 - *s2;
+}
+
+int strncmp(const char *s1, const char *s2, size_t n) {
+  for (; n > 0 && *s1 == *s2 && *s1 != '\0'; --n, ++s1, ++s2)
+    ;
+  return n == 0 ? 0 : *s1 - *s2;
+}
+
 void *memset(void *b, int c, size_t len) {
   char *dest = static_cast<char *>(b);
   for (auto i = 0u; i < len; ++i) {
