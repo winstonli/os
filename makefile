@@ -65,9 +65,11 @@ start: start.ld src/start.o
 	objcopy -O binary $< $@
 
 KERNEL_DEPS = module.ld src/modules/kernel/entry.o src/modules/kernel/main.o \
-            src/modules/kernel/assert.o \
             src/modules/kernel/apic.o \
+            src/modules/kernel/assert.o \
+            src/modules/kernel/boot/multiboot_info.o \
             src/modules/kernel/cmos.o \
+            src/modules/kernel/cpuid.o \
             src/modules/kernel/halt.o \
             src/modules/kernel/idt.o \
             src/modules/kernel/interrupt_stubs.o \
@@ -75,12 +77,12 @@ KERNEL_DEPS = module.ld src/modules/kernel/entry.o src/modules/kernel/main.o \
             src/modules/kernel/isr.o \
             src/modules/kernel/kernel.o \
             src/modules/kernel/keyboard.o \
+            src/modules/kernel/msr.o \
+            src/modules/kernel/pci.o \
             src/modules/kernel/pic.o \
             src/modules/kernel/pit.o \
-            src/modules/kernel/pci.o \
             src/modules/kernel/register.o \
             src/modules/kernel/terminal.o \
-            src/modules/kernel/boot/multiboot_info.o \
             src/modules/kernel/util/emb_list_impl.o \
             src/modules/kernel/util/string_util.o \
             src/modules/kernel/vm/frame_pool.o \
@@ -88,12 +90,11 @@ KERNEL_DEPS = module.ld src/modules/kernel/entry.o src/modules/kernel/main.o \
             src/modules/kernel/vm/page_table.o \
             src/modules/kernel/vm/pager.o \
             src/modules/kernel/vm/pallocator.o \
-            src/modules/kernel/vm/pml4e.o \
-            src/modules/kernel/vm/pdpe.o \
             src/modules/kernel/vm/pde.o \
+            src/modules/kernel/vm/pdpe.o \
+            src/modules/kernel/vm/pml4e.o \
             src/modules/kernel/vm/pte.o \
             src/modules/kernel/vm/vm.o \
-            src/modules/kernel/cpuid.o \
             $(COMMON_OBJFILES)
 
 TEST_DEPS = $(KERNEL_DEPS) \
