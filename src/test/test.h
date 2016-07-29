@@ -52,7 +52,7 @@ public:
       klog("");
       klog("== %s ==", unit_name);
       for (size_t j = 0; j < num_tests; ++j, ++t) {
-        const test &test = tests[j];
+        const test &test = tests[t];
         klog("[%d/%d] %s.%s", j + 1, num_tests, unit_name, test._name);
         test._test_func();
       }
