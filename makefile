@@ -92,6 +92,7 @@ KERNEL_DEPS = module.ld src/modules/kernel/entry.o src/modules/kernel/main.o \
             src/modules/kernel/vm/pde.o \
             src/modules/kernel/vm/pte.o \
             src/modules/kernel/vm/vm.o \
+            src/modules/kernel/cpuid.o \
             $(COMMON_OBJFILES)
 
 TEST_DEPS = $(KERNEL_DEPS) \
