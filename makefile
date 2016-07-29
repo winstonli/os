@@ -64,7 +64,7 @@ start: start.ld src/start.o
 %.bin: %.elf
 	objcopy -O binary $< $@
 
-kernel.elf: module.ld src/modules/kernel/entry.o src/modules/kernel/main.o \
+KERNEL_DEPS = module.ld src/modules/kernel/entry.o src/modules/kernel/main.o \
             src/modules/kernel/assert.o \
             src/modules/kernel/cmos.o \
             src/modules/kernel/halt.o \
@@ -80,6 +80,7 @@ kernel.elf: module.ld src/modules/kernel/entry.o src/modules/kernel/main.o \
             src/modules/kernel/register.o \
             src/modules/kernel/terminal.o \
             src/modules/kernel/boot/multiboot_info.o \
+            src/modules/kernel/util/emb_list_impl.o \
             src/modules/kernel/util/string_util.o \
             src/modules/kernel/vm/frame_pool.o \
             src/modules/kernel/vm/memory_manager.o \
@@ -92,7 +93,30 @@ kernel.elf: module.ld src/modules/kernel/entry.o src/modules/kernel/main.o \
             src/modules/kernel/vm/pte.o \
             src/modules/kernel/vm/vm.o \
             $(COMMON_OBJFILES)
+
+TEST_DEPS = $(KERNEL_DEPS) \
+            src/test/test_main.o \
+            src/test/test.o \
+            src/test/test_example.o \
+            src/test/util/test_emb_list.o
+
+kernel.elf: $(KERNEL_DEPS)
 	$(LD) -T $^ $(LDFLAGS) -o $@
+
+# same number of characters
+tstknl.elf: $(TEST_DEPS)
+	$(LD) -T $^ $(LDFLAGS) -o $@
+
+test: COMMON_FLAGS += -D RUN_TESTS -I src/test
+test: test_kernel.iso
+	qemu-system-x86_64 -m 16g test_kernel.iso
+
+test_kernel.iso: start grub.cfg tstknl.bin
+	mkdir -p iso/boot/grub
+	cp start iso/boot/start
+	cp test_grub.cfg iso/boot/grub/grub.cfg
+	cp tstknl.bin iso/boot/
+	grub-mkrescue -o $@ iso
 
 %.o: %.cpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
