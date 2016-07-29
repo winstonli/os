@@ -5,6 +5,7 @@
 #include <assert.h>
 #include <cmos.h>
 #include <idt.h>
+#include <ioapic.h>
 #include <irq.h>
 #include <isr.h>
 #include <kernel.h>
@@ -50,6 +51,7 @@ extern "C" void kernel_main(const uint32_t multiboot_magic,
   pic::init();
   pci::init();
   lapic::init();
+  ioapic::init();
 
   uint64_t rip = 0;
   asm volatile("leaq (%%rip), %0" : "=r"(rip));

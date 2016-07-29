@@ -61,12 +61,13 @@ static uint32_t lapic_read_register(uint64_t base_vaddr, uint32_t reg) {
 }
 
 static void lapic_write_register(uint64_t base_vaddr, uint32_t reg,
-                                uint32_t data) {
+                                 uint32_t data) {
   *reinterpret_cast<volatile uint32_t*>(base_vaddr + reg) = data;
 }
 
 static uint8_t lapic_get_version(uint64_t base_vaddr) {
-  return lapic_read_register(base_vaddr, LAPIC_VERSION_REG) & LAPIC_VERSION_MASK;
+  return lapic_read_register(base_vaddr, LAPIC_VERSION_REG) &
+         LAPIC_VERSION_MASK;
 }
 
 void lapic::init() {

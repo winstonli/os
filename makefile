@@ -72,6 +72,7 @@ KERNEL_DEPS = module.ld src/modules/kernel/entry.o src/modules/kernel/main.o \
             src/modules/kernel/halt.o \
             src/modules/kernel/idt.o \
             src/modules/kernel/interrupt_stubs.o \
+            src/modules/kernel/ioapic.o \
             src/modules/kernel/irq.o \
             src/modules/kernel/isr.o \
             src/modules/kernel/kernel.o \
