@@ -65,7 +65,6 @@ start: start.ld src/start.o
 	objcopy -O binary $< $@
 
 KERNEL_DEPS = module.ld src/modules/kernel/entry.o src/modules/kernel/main.o \
-            src/modules/kernel/apic.o \
             src/modules/kernel/assert.o \
             src/modules/kernel/boot/multiboot_info.o \
             src/modules/kernel/cmos.o \
@@ -77,6 +76,7 @@ KERNEL_DEPS = module.ld src/modules/kernel/entry.o src/modules/kernel/main.o \
             src/modules/kernel/isr.o \
             src/modules/kernel/kernel.o \
             src/modules/kernel/keyboard.o \
+            src/modules/kernel/lapic.o \
             src/modules/kernel/msr.o \
             src/modules/kernel/pci.o \
             src/modules/kernel/pic.o \

@@ -1,4 +1,4 @@
-#include "apic.h"
+#include "lapic.h"
 #include <vm/vm.h>
 #include "assert.h"
 #include "cpuid.h"
@@ -34,68 +34,68 @@
 #define LAPIC_DESTINATION_FORMAT_FLAT 0xffffffffu
 
 #define CPUID_FLAG_APIC (1 << 9)
-#define APIC_BASE_MSR 0x1b
-#define APIC_BASE_MSR_ENABLE 0x800
+#define LAPIC_BASE_MSR 0x1b
+#define LAPIC_BASE_MSR_ENABLE 0x800
 
 #define LAPIC_VERSION_MASK 0xff
 
-static void apic_set_base_paddr(uint64_t paddr) {
+static void lapic_set_base_paddr(uint64_t paddr) {
   // paddr must be page aligned, cannot be past 4gb
   assert(paddr == (paddr & 0xfffff100));
-  msr::write(APIC_BASE_MSR, paddr | APIC_BASE_MSR_ENABLE);
+  msr::write(LAPIC_BASE_MSR, paddr | LAPIC_BASE_MSR_ENABLE);
 }
 
-static uint64_t apic_get_base_paddr() {
-  auto addr = msr::read(APIC_BASE_MSR);
+static uint64_t lapic_get_base_paddr() {
+  auto addr = msr::read(LAPIC_BASE_MSR);
   return (addr & ~0xfffull);
 }
 
-static uint64_t apic_get_base_vaddr() {
-  auto base_paddr = apic_get_base_paddr();
+static uint64_t lapic_get_base_vaddr() {
+  auto base_paddr = lapic_get_base_paddr();
   return reinterpret_cast<uint64_t>(
       vm::paddr_to_vaddr(reinterpret_cast<void*>(base_paddr)));
 }
 
-static uint32_t apic_read_register(uint64_t base_vaddr, uint32_t reg) {
+static uint32_t lapic_read_register(uint64_t base_vaddr, uint32_t reg) {
   return *reinterpret_cast<volatile uint32_t*>(base_vaddr + reg);
 }
 
-static void apic_write_register(uint64_t base_vaddr, uint32_t reg,
+static void lapic_write_register(uint64_t base_vaddr, uint32_t reg,
                                 uint32_t data) {
   *reinterpret_cast<volatile uint32_t*>(base_vaddr + reg) = data;
 }
 
-static uint8_t apic_get_version(uint64_t base_vaddr) {
-  return apic_read_register(base_vaddr, LAPIC_VERSION_REG) & LAPIC_VERSION_MASK;
+static uint8_t lapic_get_version(uint64_t base_vaddr) {
+  return lapic_read_register(base_vaddr, LAPIC_VERSION_REG) & LAPIC_VERSION_MASK;
 }
 
-void apic::init() {
+void lapic::init() {
   klog_debug("Initialising Local APIC");
 
   auto cpuid_res = cpuid(1);
   auto cpuid_apic_supported = (cpuid_res.edx & CPUID_FLAG_APIC) != 0;
   assertf(cpuid_apic_supported, "APIC not supported on this cpu!");
 
-  auto base_paddr = apic_get_base_paddr();
-  auto base_vaddr = apic_get_base_vaddr();
-  klog_debug("APIC base physical address is %x", base_paddr);
-  klog_debug("APIC base virtual address is %x", base_vaddr);
+  auto base_paddr = lapic_get_base_paddr();
+  auto base_vaddr = lapic_get_base_vaddr();
+  klog_debug("Local APIC base physical address is %x", base_paddr);
+  klog_debug("Local APIC base virtual address is %x", base_vaddr);
 
-  uint32_t version = apic_get_version(base_vaddr);
-  klog_debug("APIC version is %x", version);
+  uint32_t version = lapic_get_version(base_vaddr);
+  klog_debug("Local APIC version is %x", version);
 
-  // hardware enable the apic if it wasn't already enabled by setting its
+  // hardware enable the local apic if it wasn't already enabled by setting its
   // base to what it was already (usually 0xfee00000)
-  apic_set_base_paddr(base_paddr);
+  lapic_set_base_paddr(base_paddr);
 
   // clear task priority to enable all interrupts
-  apic_write_register(base_vaddr, LAPIC_TASK_PRIORITY_REG, 0);
+  lapic_write_register(base_vaddr, LAPIC_TASK_PRIORITY_REG, 0);
 
   // set destination mode to flat, all cpus use logical id 1
-  apic_write_register(base_vaddr, LAPIC_DESTINATION_FORMAT_REG, 0xffffffffu);
-  apic_write_register(base_vaddr, LAPIC_LOGICAL_DESTINATION_REG, 0x01000000u);
+  lapic_write_register(base_vaddr, LAPIC_DESTINATION_FORMAT_REG, 0xffffffffu);
+  lapic_write_register(base_vaddr, LAPIC_LOGICAL_DESTINATION_REG, 0x01000000u);
 
   // setup spurious interrupt vector register
   uint32_t flags = 0x100 | 0xff;
-  apic_write_register(base_vaddr, LAPIC_SPURIOUS_INTERRUPT_VECTOR_REG, flags);
+  lapic_write_register(base_vaddr, LAPIC_SPURIOUS_INTERRUPT_VECTOR_REG, flags);
 }

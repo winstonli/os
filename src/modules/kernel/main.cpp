@@ -2,7 +2,6 @@
 #include <common/interrupts.h>
 #include <common/multiboot2.h>
 
-#include <apic.h>
 #include <assert.h>
 #include <cmos.h>
 #include <idt.h>
@@ -10,6 +9,7 @@
 #include <isr.h>
 #include <kernel.h>
 #include <keyboard.h>
+#include <lapic.h>
 #include <log.h>
 #include <pci.h>
 #include <pic.h>
@@ -49,7 +49,7 @@ extern "C" void kernel_main(const uint32_t multiboot_magic,
   keyboard::init();
   pic::init();
   pci::init();
-  apic::init();
+  lapic::init();
 
   uint64_t rip = 0;
   asm volatile("leaq (%%rip), %0" : "=r"(rip));
