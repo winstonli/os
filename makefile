@@ -66,6 +66,7 @@ start: start.ld src/start.o
 
 kernel.elf: module.ld src/modules/kernel/entry.o src/modules/kernel/main.o \
             src/modules/kernel/assert.o \
+            src/modules/kernel/apic.o \
             src/modules/kernel/cmos.o \
             src/modules/kernel/halt.o \
             src/modules/kernel/idt.o \
