@@ -3,7 +3,7 @@
 /*
    How to write tests:
 
-   1. Add this object file to the targets.
+   1. Add this object file to the TEST_DEPS in the makefile.
 
    2. Come up with a unit name. No underscores. E.g. TestExample
 

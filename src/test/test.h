@@ -19,7 +19,11 @@ class test_runner {
   struct test {
     const char *_name;
     void (*_test_func)();
-    test(const char *name, void (*test_func)()) : _name(name), _test_func(test_func) {}
+    test(
+        const char *name,
+        void (*test_func)()
+    ) : _name(name),
+        _test_func(test_func) {}
   };
 
   fixedsize_vector<unit, 0x100> units;
@@ -39,7 +43,13 @@ public:
   void run_tests() {
     auto total_units = units.size();
     auto total_tests = tests.size();
-    klog("Running %d unit%s containing %d test%s.", total_units, plur(total_units), total_tests, plur(total_tests));
+    klog(
+        "Running %d unit%s containing %d test%s.",
+        total_units,
+        plur(total_units),
+        total_tests,
+        plur(total_tests)
+    );
     size_t t = 0;
     for (size_t i = 0; i < total_units; ++i) {
       const unit &u = units[i];
@@ -71,23 +81,43 @@ private:
 
 };
 
-#define ASSERT_TRUE(cond) assert(cond)
+#define ASSERT_TRUE(cond) \
+  assert(cond)
 
-#define ASSERTF_TRUE(cond, msg, ...) assertf(cond, msg, ##__VA_ARGS__)
+#define ASSERTF_TRUE(cond, msg, ...) \
+  assertf(cond, msg, ##__VA_ARGS__)
 
-#define ASSERT_EQ(expected, actual) assert((expected) == (actual))
+#define ASSERT_EQ(expected, actual) \
+  assert((expected) == (actual))
 
-#define FAIL() assert(false)
+#define FAIL() \
+  assert(false)
 
-#define TESTS() test_runner r; test_runner::inst = &r
+#define TESTS() \
+  test_runner r; \
+  test_runner::inst = &r
 
-#define RUN_ALL_TESTS() do { test_runner::inst->run_tests(); } while (false)
+#define RUN_ALL_TESTS() \
+  do { \
+    test_runner::inst->run_tests(); \
+  } while (false)
 
-#define UNIT(unitname) void unitname ()
+#define UNIT(unitname) \
+  void unitname ()
 
-#define TEST(unitname, testname) void unitname##__##testname ()
+#define TEST(unitname, testname) \
+  void unitname##__##testname ()
 
-#define ADD_UNIT(unitname) do { void unitname (); test_runner::inst->add_unit(#unitname); unitname (); } while (false)
+#define ADD_UNIT(unitname) \
+  do { \
+    void unitname (); \
+    test_runner::inst->add_unit(#unitname); \
+    unitname (); \
+  } while (false)
 
-#define ADD_TEST(unitname, testname) void unitname##__##testname (); do { test_runner::inst->add_test(&unitname##__##testname, #testname); } while (false)
+#define ADD_TEST(unitname, testname) \
+  void unitname##__##testname (); \
+  do { \
+    test_runner::inst->add_test(&unitname##__##testname, #testname); \
+  } while (false)
 
