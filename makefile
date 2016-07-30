@@ -4,7 +4,7 @@ AS := nasm
 
 MODULES := kernel.bin
 COMMON_OBJFILES += src/common/common.o src/common/string.o \
-                   src/common/interrupts.o
+                   src/common/interrupts.o src/common/checksum.o
 
 COMMON_FLAGS += -fPIC -ffreestanding -fno-builtin \
                 -fno-exceptions -fno-rtti \
@@ -66,6 +66,7 @@ start: start.ld src/start.o
 
 KERNEL_DEPS = module.ld src/modules/kernel/entry.o src/modules/kernel/main.o \
             src/modules/kernel/assert.o \
+            src/modules/kernel/acpi.o \
             src/modules/kernel/boot/multiboot_info.o \
             src/modules/kernel/cmos.o \
             src/modules/kernel/cpuid.o \
