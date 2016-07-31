@@ -65,7 +65,7 @@ static rsdp_descriptor *find_rsdp() {
   return reinterpret_cast<rsdp_descriptor *>(res);
 }
 
-struct acpi_sdt_header_t {
+struct PACKED acpi_sdt_header_t {
   char signature[4];  // not null-terminated!
   uint32_t length;    // total size of the table including this header
   uint8_t revision;
@@ -129,7 +129,46 @@ static rsdt_result_t find_rsdt() {
   return {rsdt_vaddr, rsdp_vaddr->revision != 0};
 }
 
-static char *find_madt(const rsdt_result_t &rsdt) {
+struct PACKED acpi_madt_header_t {
+  acpi_sdt_header_t header;
+  uint32_t local_controller_paddr;
+  uint32_t flags;  // 1 = dual legacy pics installed
+};
+
+enum acpi_madt_entry_type_t : uint8_t {
+  APIC_MADT_PROCESSOR_LOCAL_APIC = 0,
+  APIC_MADT_IO_APIC = 1,
+  APIC_MADT_INTERRUPT_SOURCE_OVERRIDE = 2,
+  APIC_MADT_NMI_SOURCE = 3,
+  APIC_MADT_LAPIC_NMI_STRUCTURE = 4,
+  APIC_MADT_LAPIC_ADDR_OVERRIDE_STRUCTURE = 5,
+  APIC_MADT_IO_SAPIC = 6,
+  APIC_MADT_LOCAL_SAPIC = 7,
+  APIC_MADT_PLATFORM_INTERRUPT_SOURCES = 8
+};
+
+struct PACKED acpi_madt_entry_t {
+  acpi_madt_entry_type_t type;
+  uint8_t length;
+};
+STATIC_ASSERT(sizeof(acpi_madt_entry_t) == 2 * sizeof(uint8_t));
+
+struct PACKED acpi_madt_proc_local_entry_t {
+  acpi_madt_entry_t header;
+  uint8_t processor_id;
+  uint8_t apic_id;
+  uint32_t flags;  // 1 = processor enabled
+};
+
+struct PACKED acpi_madt_io_apic_entry_t {
+  acpi_madt_entry_t header;
+  uint8_t io_apic_id;
+  uint8_t reserved;  // zeroed
+  uint32_t io_apic_paddr;
+  uint32_t global_interrupt_base;
+};
+
+static acpi_madt_header_t *find_madt(const rsdt_result_t &rsdt) {
   assert(rsdt.rsdt_vaddr);
 
   if (rsdt.is_xsdt) {
@@ -142,7 +181,7 @@ static char *find_madt(const rsdt_result_t &rsdt) {
           vm::paddr_to_vaddr(reinterpret_cast<void *>(paddr_ptrs[i])));
       klog_debug("Entry %d has signature %s", i, ptr_vaddr->signature);
       if (memcmp(ptr_vaddr->signature, "APIC", 4) == 0) {
-        return reinterpret_cast<char *>(ptr_vaddr);
+        return reinterpret_cast<acpi_madt_header_t *>(ptr_vaddr);
       }
     }
   } else {
@@ -155,7 +194,7 @@ static char *find_madt(const rsdt_result_t &rsdt) {
           vm::paddr_to_vaddr(reinterpret_cast<void *>(paddr_ptrs[i])));
       klog_debug("Entry %d has signature %s", i, ptr_vaddr->signature);
       if (memcmp(ptr_vaddr->signature, "APIC", 4) == 0) {
-        return reinterpret_cast<char *>(ptr_vaddr);
+        return reinterpret_cast<acpi_madt_header_t *>(ptr_vaddr);
       }
     }
   }
@@ -163,11 +202,48 @@ static char *find_madt(const rsdt_result_t &rsdt) {
   return nullptr;
 }
 
+static void parse_madt(const acpi_madt_header_t *madt_vaddr) {
+  auto madt_base_vaddr = reinterpret_cast<const char *>(madt_vaddr);
+  auto madt_entry_vaddr = reinterpret_cast<const char *>(&madt_vaddr[1]);
+  while (madt_entry_vaddr < madt_base_vaddr + madt_vaddr->header.length) {
+    auto madt_entry =
+        reinterpret_cast<const acpi_madt_entry_t *>(madt_entry_vaddr);
+
+    switch (madt_entry->type) {
+      case APIC_MADT_PROCESSOR_LOCAL_APIC: {
+        auto entry =
+            reinterpret_cast<const acpi_madt_proc_local_entry_t *>(madt_entry);
+        klog_debug("MADT PL entry (proc id=%d, apic id=%d, enabled=%s)",
+                   entry->processor_id, entry->apic_id,
+                   entry->flags & 0x1 ? "yes" : "no");
+        break;
+      }
+      case APIC_MADT_IO_APIC: {
+        auto entry =
+            reinterpret_cast<const acpi_madt_io_apic_entry_t *>(madt_entry);
+        klog_debug(
+            "MADT IOAPIC entry (apic id=%d, paddr=%x, interrupt base=%x)",
+            entry->io_apic_id, entry->io_apic_paddr,
+            entry->global_interrupt_base);
+        break;
+      }
+      default:
+        klog_debug("MADT entry with type %d and length %x", madt_entry->type,
+                   madt_entry->length);
+    }
+
+    madt_entry_vaddr += madt_entry->length;
+  }
+}
+
 void acpi::init() {
   auto rsdt = find_rsdt();
   if (rsdt.rsdt_vaddr) {
     klog_debug("Found RSDT at %x", rsdt.rsdt_vaddr);
     auto madt = find_madt(rsdt);
-    klog_debug("Found MADT at %x", madt);
+    if (madt) {
+      klog_debug("Found MADT at %x", madt);
+      parse_madt(madt);
+    }
   }
 }
