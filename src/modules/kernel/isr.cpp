@@ -1,5 +1,6 @@
 #include "isr.h"
 #include "common/common.h"
+#include "halt.h"
 #include "idt.h"
 #include "log.h"
 #include "registers.h"
@@ -77,16 +78,27 @@ enum exception_code_t {
 
 extern "C" void isr_handler(const registers_t *regs) {
   auto gpf_err_ptr = reinterpret_cast<const gpf_err_code *>(&regs->err_code);
+
+  auto err_ext_str = gpf_err_ptr->external ? "yes" : "no";
+  auto err_table_str =
+      gpf_err_ptr->table == 0 ? "GDT" : gpf_err_ptr->table == 2 ? "LDT" : "IDT";
+
   switch (static_cast<exception_code_t>(regs->int_no)) {
     case EX_GENERAL_PROTECTION_FAULT:
-      klog_warn("\ngot a gpf at ip=%x with err_no=%x\n", regs->rip,
-                regs->err_code);
-      klog_warn("  (idx=%x, tbl=%x, external=%s)\n", gpf_err_ptr->index,
-                gpf_err_ptr->table, gpf_err_ptr->external ? "yes" : "no");
+      klog_err("Got a general protection fault at rip=%x", regs->rip);
+      klog_err("  (err_code=%x: idx=%x, tbl=%s, external=%s)", regs->err_code,
+               gpf_err_ptr->index, err_table_str, err_ext_str);
+      halt();
+      break;
+    case EX_PAGE_FAULT:
+      klog_err("Got a page fault at rip=%x", regs->rip);
+      klog_err("  (err_code=%x: idx=%x, tbl=%s, external=%s)", regs->err_code,
+               gpf_err_ptr->index, err_table_str, err_ext_str);
+      halt();
       break;
     default:
-      klog_debug("\ngot an exception\n  int_no=%x, err_no=%x, ip=%x)\n",
-                 regs->int_no, regs->err_code, regs->rip);
+      klog_debug("got an exception (int_no=%x, err_no=%x, ip=%x)", regs->int_no,
+                 regs->err_code, regs->rip);
   }
 }
 
