@@ -30,10 +30,7 @@
 // see http://wiki.osdev.org/PIC#Initialisation
 // and http://stackoverflow.com/questions/282983/setting-up-irq-mapping
 void pic::init() {
-  unsigned char a1, a2;
-
-  a1 = in<uint8_t>(PIC1_DATA);  // save masks
-  a2 = in<uint8_t>(PIC2_DATA);
+  auto mask = get_mask();  // save masks
 
   // starts the initialization sequence (in cascade mode)
   out<uint8_t>(PIC1_COMMAND, ICW1_INIT + ICW1_ICW4);
@@ -56,8 +53,18 @@ void pic::init() {
   out<uint8_t>(PIC2_DATA, ICW4_8086);
   io_wait();
 
-  out<uint8_t>(PIC1_DATA, a1);  // restore saved masks.
-  out<uint8_t>(PIC2_DATA, a2);
+  set_mask(mask);  // restore saved masks.
+}
+
+pic::mask_t pic::get_mask() {
+  uint8_t master = in<uint8_t>(PIC1_DATA);
+  uint8_t slave = in<uint8_t>(PIC2_DATA);
+  return {master, slave};
+}
+
+void pic::set_mask(mask_t mask) {
+  out<uint8_t>(PIC1_DATA, mask.master);  // restore saved masks.
+  out<uint8_t>(PIC2_DATA, mask.slave);
 }
 
 // see http://wiki.osdev.org/8259_PIC#End_of_Interrupt

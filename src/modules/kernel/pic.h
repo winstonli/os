@@ -11,7 +11,17 @@
 namespace pic {
 
 // initialise the pic controller, must be called before interrupts are enabled
+// preserves interrupt mask
 void init();
+
+struct mask_t {
+  uint8_t master;
+  uint8_t slave;
+};
+
+// get/set which irq lines are disabled (e.g. 0xff, 0xff indicates all disabled)
+mask_t get_mask();
+void set_mask(mask_t mask);
 
 // send an end-of-interrupt signal to the pic for the corresponding interrupt
 // request number (where irq_no = int_no - PIC1_OFFSET)
