@@ -119,7 +119,7 @@ void pit::register_single(void (*fn_ptr)(const registers_t *),
 }
 
 void pit::busy_wait(uint64_t interval_ms) {
-  auto expected_ticks = (interval_ms * pit_frequency[0]) / 1000;
+  auto expected_ticks = (interval_ms * pit_frequency[0]) / 1000 + ticks;
   while (ticks < expected_ticks)
     ;
 }

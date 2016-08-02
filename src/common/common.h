@@ -37,3 +37,19 @@ void io_wait();
 
 #define MIN(a,b) ((a) < (b) ? (a) : (b))
 #define MAX(a,b) ((a) > (b) ? (a) : (b))
+
+static uint8_t operator""_u8(unsigned long long x) {
+  return static_cast<uint8_t>(x);
+}
+
+static uint16_t operator""_u16(unsigned long long x) {
+  return static_cast<uint16_t>(x);
+}
+
+static uint32_t operator""_u32(unsigned long long x) {
+  return static_cast<uint32_t>(x);
+}
+
+static uint64_t operator""_u64(unsigned long long x) {
+  return static_cast<uint64_t>(x);
+}
