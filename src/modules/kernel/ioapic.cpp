@@ -12,6 +12,7 @@
 // each irq has two registers (e.g. 0x10/0x11, then 0x12/0x13 etc...)
 // first register is low, second is high
 #define IOAPIC_IRQ_BASE 0x10
+#define IOAPIC_IRQ_DISABLE (1 << 16)
 
 static uint32_t ioapic_read_register(uint64_t base_vaddr, uint32_t reg) {
   // select register, then read from data addr
@@ -24,6 +25,13 @@ static void ioapic_write_register(uint64_t base_vaddr, uint32_t reg,
   // select register, then write to data addr
   *reinterpret_cast<volatile uint32_t*>(base_vaddr + IOAPIC_REG) = reg;
   *reinterpret_cast<volatile uint32_t*>(base_vaddr + IOAPIC_DATA) = data;
+}
+
+static void ioapic_write_irq(uint64_t base_vaddr, uint8_t irq, uint64_t data) {
+  auto low = static_cast<uint32_t>(data);
+  auto high = static_cast<uint32_t>(data >> 32);
+  ioapic_write_register(base_vaddr, IOAPIC_IRQ_BASE + irq * 2, low);
+  ioapic_write_register(base_vaddr, IOAPIC_IRQ_BASE + irq * 2 + 1, high);
 }
 
 static uint32_t ioapic_get_version(uint64_t base_vaddr) {
@@ -47,4 +55,8 @@ void ioapic::init(acpi::config_t config) {
   auto redirection_entries = ioapic_get_redirection_entries_count(base);
   klog_debug("IOAPIC is version %x", version);
   klog_debug("IOAPIC has %d redirection entries", redirection_entries);
+
+  for (uint8_t i = 0; i < redirection_entries; ++i) {
+    ioapic_write_irq(base, i, IOAPIC_IRQ_DISABLE);
+  }
 }
