@@ -16,21 +16,34 @@
 
 #define MAX_HANDLERS 16
 
+enum pit_handler_type_t { PIT_HANDLER_SINGLE, PIT_HANDLER_PERIODIC };
+
 struct pit_handler_t {
   void (*fn_ptr)(const registers_t *);
   uint64_t reload_ticks;
   uint64_t remaining_ticks;
+  pit_handler_type_t type;
 };
 
 STATIC pit_handler_t handlers[MAX_HANDLERS];
 STATIC uint8_t handler_count;
 STATIC uint16_t pit_frequency[3];  // frequency for each channel (hz)
+STATIC volatile uint64_t ticks;
 
 static void pit_handler(const registers_t *regs) {
+  ++ticks;
   for (uint8_t i = 0; i < handler_count; ++i) {
     if (--handlers[i].remaining_ticks == 0) {
       handlers[i].remaining_ticks = handlers[i].reload_ticks;
       (*handlers[i].fn_ptr)(regs);
+      if (handlers[i].type == PIT_HANDLER_SINGLE) {
+        // move everything back one to erase expired handler
+        for (uint8_t j = i; j < handler_count - 1; ++j) {
+          handlers[j] = handlers[j + 1];
+        }
+        --i;
+        --handler_count;
+      }
     }
   }
 }
@@ -55,7 +68,6 @@ static void pit_start_counter(uint16_t freq, uint8_t counter_id,
              mode);
 
   uint32_t freq_divisor_32 = PIT_NATIVE_FREQ_HZ / freq;
-
   uint16_t freq_divisor = MIN(freq_divisor_32, (1 << 16) - 1);
 
   klog_debug("frequency divisor is %d", freq_divisor);
@@ -78,18 +90,36 @@ void pit::init() {
   memzero(&handlers[0], MAX_HANDLERS);
   handler_count = 0;
   memzero(&pit_frequency[0], 3);
+  ticks = 0;
 
   pit_start_counter(1000, 0, pit_mode_t::SQUARE_WAVE);
 }
 
-void pit::register_periodic(void (*fn_ptr)(const registers_t *),
-                            uint64_t interval_ms) {
+static void pit_register(void (*fn_ptr)(const registers_t *),
+                         uint64_t interval_ms, pit_handler_type_t type) {
   assert(handler_count < MAX_HANDLERS);
 
   auto &handler = handlers[handler_count];
   handler.fn_ptr = fn_ptr;
   handler.reload_ticks = (interval_ms * pit_frequency[0]) / 1000;
   handler.remaining_ticks = handler.reload_ticks;
+  handler.type = type;
 
   handler_count++;
+}
+
+void pit::register_periodic(void (*fn_ptr)(const registers_t *),
+                            uint64_t interval_ms) {
+  pit_register(fn_ptr, interval_ms, PIT_HANDLER_PERIODIC);
+}
+
+void pit::register_single(void (*fn_ptr)(const registers_t *),
+                          uint64_t interval_ms) {
+  pit_register(fn_ptr, interval_ms, PIT_HANDLER_SINGLE);
+}
+
+void pit::busy_wait(uint64_t interval_ms) {
+  auto expected_ticks = (interval_ms * pit_frequency[0]) / 1000;
+  while (ticks < expected_ticks)
+    ;
 }
