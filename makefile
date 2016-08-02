@@ -12,7 +12,7 @@ COMMON_FLAGS += -fPIC -ffreestanding -fno-builtin \
                 -pedantic -Wshadow -Wpointer-arith -Wcast-align \
                 -Wwrite-strings -Wredundant-decls -Wno-unused-parameter \
                 -Winline -Wno-long-long -Wuninitialized \
-                -Wno-unused-private-field \
+                -Wno-unused-private-field -Wno-unused-function \
                 -Wno-gnu-zero-variadic-macro-arguments
 
 CXXFLAGS += $(COMMON_FLAGS) \

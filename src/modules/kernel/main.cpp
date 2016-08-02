@@ -51,9 +51,9 @@ extern "C" void kernel_main(const uint32_t multiboot_magic,
   keyboard::init();
   pic::init();
   pci::init();
-  acpi::init();
+  auto config = acpi::init();
   lapic::init();
-  ioapic::init();
+  ioapic::init(config);
 
   uint64_t rip = 0;
   asm volatile("leaq (%%rip), %0" : "=r"(rip));

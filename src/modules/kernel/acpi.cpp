@@ -202,7 +202,8 @@ static acpi_madt_header_t *find_madt(const rsdt_result_t &rsdt) {
   return nullptr;
 }
 
-static void parse_madt(const acpi_madt_header_t *madt_vaddr) {
+static void parse_madt(const acpi_madt_header_t *madt_vaddr,
+                       acpi::config_t *config) {
   auto madt_base_vaddr = reinterpret_cast<const char *>(madt_vaddr);
   auto madt_entry_vaddr = reinterpret_cast<const char *>(&madt_vaddr[1]);
   while (madt_entry_vaddr < madt_base_vaddr + madt_vaddr->header.length) {
@@ -221,10 +222,13 @@ static void parse_madt(const acpi_madt_header_t *madt_vaddr) {
       case APIC_MADT_IO_APIC: {
         auto entry =
             reinterpret_cast<const acpi_madt_io_apic_entry_t *>(madt_entry);
+        auto paddr = entry->io_apic_paddr;
+        auto vaddr = vm::paddr_to_vaddr(reinterpret_cast<void *>(paddr));
         klog_debug(
             "MADT IOAPIC entry (apic id=%d, paddr=%x, interrupt base=%x)",
             entry->io_apic_id, entry->io_apic_paddr,
             entry->global_interrupt_base);
+        config->ioapic_base_vaddr = reinterpret_cast<uint64_t>(vaddr);
         break;
       }
       default:
@@ -236,14 +240,16 @@ static void parse_madt(const acpi_madt_header_t *madt_vaddr) {
   }
 }
 
-void acpi::init() {
+acpi::config_t acpi::init() {
+  config_t config = {};
   auto rsdt = find_rsdt();
   if (rsdt.rsdt_vaddr) {
     klog_debug("Found RSDT at %x", rsdt.rsdt_vaddr);
     auto madt = find_madt(rsdt);
     if (madt) {
       klog_debug("Found MADT at %x", madt);
-      parse_madt(madt);
+      parse_madt(madt, &config);
     }
   }
+  return config;
 }
