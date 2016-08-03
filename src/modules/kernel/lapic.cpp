@@ -4,6 +4,10 @@
 #include "cpuid.h"
 #include "log.h"
 #include "msr.h"
+#include "pic.h"
+#include "pit.h"
+
+STATIC_ASSERT(LAPIC_OFFSET >= 0x30);  // sanity check offset
 
 #define LAPIC_ID_REG 0x20       // local apic id
 #define LAPIC_VERSION_REG 0x30  // local apic version
@@ -70,6 +74,44 @@ static uint8_t lapic_get_version(uint64_t base_vaddr) {
          LAPIC_VERSION_MASK;
 }
 
+static void lapic_init_timer(uint64_t base_vaddr) {
+  // see http://wiki.osdev.org/APIC_timer#Example_code_in_C
+
+  // set divider to 16 (TODO: why does 16 => 0x3?)
+  const auto divisor = 0x3;
+  lapic_write_register(base_vaddr, LAPIC_TIMER_DIVIDE_CONFIG_REG, divisor);
+
+  // set initial counter to -1
+  lapic_write_register(base_vaddr, LAPIC_TIMER_INITIAL_COUNT_REG, ~0_u32);
+
+  // wait for 1000ms
+  pit::busy_wait(1000);
+
+  // stop the timer (TODO: magic number?)
+  lapic_write_register(base_vaddr, LAPIC_TIMER_REG, 0x10000);
+
+  auto count = lapic_read_register(base_vaddr, LAPIC_TIMER_CURRENT_COUNT_REG);
+  auto ticks = ~0_u32 - count;
+  ticks = 1000000_u32;  // TODO: remove this
+
+  klog_debug("Registered %d ticks in a second", ticks);
+
+  // TODO: fix this at some point
+  // klog_debug("Disabling PIC");
+  // pic::set_mask({0xff, 0xff});
+  //
+  // // start timer on irq 0, divider 16 with the specified number of ticks
+  // lapic_write_register(base_vaddr, LAPIC_TIMER_REG, LAPIC_OFFSET | 0x20000);
+  // lapic_write_register(base_vaddr, LAPIC_TIMER_DIVIDE_CONFIG_REG, divisor);
+  // lapic_write_register(base_vaddr, LAPIC_TIMER_INITIAL_COUNT_REG, ticks);
+  //
+  // while (true) {
+  //   count = lapic_read_register(base_vaddr, LAPIC_TIMER_CURRENT_COUNT_REG);
+  //   klog_debug("count = %d", count);
+  //   pit::busy_wait(100);
+  // }
+}
+
 void lapic::init() {
   klog_debug("Initialising Local APIC");
 
@@ -99,4 +141,7 @@ void lapic::init() {
   // setup spurious interrupt vector register
   uint32_t flags = 0x100 | 0xff;
   lapic_write_register(base_vaddr, LAPIC_SPURIOUS_INTERRUPT_VECTOR_REG, flags);
+
+  // initialise local apic timer
+  lapic_init_timer(base_vaddr);
 }

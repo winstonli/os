@@ -69,12 +69,14 @@ void pic::set_mask(mask_t mask) {
 
 // see http://wiki.osdev.org/8259_PIC#End_of_Interrupt
 void pic::send_eoi(uint8_t irq) {
-  if (irq >= 8) {
-    // TODO: we do not handle the case of a spurious irq, in which case we must
-    // NOT send an eoi to the slave (but still send one to the master, see
-    // http://wiki.osdev.org/8259_PIC#Handling_Spurious_IRQs
-    out<uint8_t>(PIC2_COMMAND, PIC_EOI);
+  if (irq < 16) {
+    if (irq >= 8) {
+      // TODO: we do not handle the case of a spurious irq, in which case we
+      // must
+      // NOT send an eoi to the slave (but still send one to the master, see
+      // http://wiki.osdev.org/8259_PIC#Handling_Spurious_IRQs
+      out<uint8_t>(PIC2_COMMAND, PIC_EOI);
+    }
+    out<uint8_t>(PIC1_COMMAND, PIC_EOI);
   }
-
-  out<uint8_t>(PIC1_COMMAND, PIC_EOI);
 }

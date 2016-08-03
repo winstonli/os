@@ -51,9 +51,6 @@ extern "C" void kernel_main(const uint32_t multiboot_magic,
   keyboard::init();
   pic::init();
   pci::init();
-  auto config = acpi::init();
-  lapic::init();
-  ioapic::init(config);
 
   uint64_t rip = 0;
   asm volatile("leaq (%%rip), %0" : "=r"(rip));
@@ -62,6 +59,10 @@ extern "C" void kernel_main(const uint32_t multiboot_magic,
   // terminal_printf("%s: %x\n", "Multiboot data is at", multiboot_data);
 
   enable_interrupts();
+
+  auto config = acpi::init();
+  ioapic::init(config);
+  lapic::init();
 
 #ifdef RUN_TESTS
   test_get_content(0, nullptr);
