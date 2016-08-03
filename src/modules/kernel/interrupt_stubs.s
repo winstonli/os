@@ -3,7 +3,6 @@
 ; convenience functions to push and pop all general purpose registers
 ; (note how the order of pushes determines the order of structure members
 ; for registers_t, but otherwise the order is arbitrary)
-; TODO: we are not saving r8-r16
 ; TODO: we are not saving sse/mmx/x87/avx registers
 %macro push_all 0
       push rax
@@ -13,9 +12,25 @@
       push rbp
       push rsi
       push rdi
+      push r8
+      push r9
+      push r10
+      push r11
+      push r12
+      push r13
+      push r14
+      push r15
 %endmacro
 
 %macro pop_all 0
+      pop r15
+      pop r14
+      pop r13
+      pop r12
+      pop r11
+      pop r10
+      pop r9
+      pop r8
       pop rdi
       pop rsi
       pop rbp
