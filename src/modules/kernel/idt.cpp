@@ -1,6 +1,6 @@
 #include "idt.h"
+#include <string.h>
 #include "common/common.h"
-#include "common/string.h"
 #include "terminal.h"
 
 // see JamesM's kernel development tutorials, section 4.4.
@@ -59,7 +59,7 @@ void idt::init() {
   idt_ptr.limit = sizeof(idt_entry_t) * IDT_NUM_ENTRIES - 1;
   idt_ptr.base = (uint64_t)&idt_entries;
 
-  memzero(&idt_entries[0], IDT_NUM_ENTRIES);
+  memset(&idt_entries[0], 0, IDT_NUM_ENTRIES * sizeof(idt_entry_t));
 
   idt_flush(&idt_ptr);
 }

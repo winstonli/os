@@ -53,3 +53,6 @@ static uint32_t operator""_u32(unsigned long long x) {
 static uint64_t operator""_u64(unsigned long long x) {
   return static_cast<uint64_t>(x);
 }
+
+extern "C" void memcpy_volatile (volatile void *dest, volatile void *src, uint64_t n);
+extern "C" void memset_volatile (volatile void *s, char c, uint64_t n);

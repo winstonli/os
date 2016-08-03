@@ -1,6 +1,6 @@
 #include "irq.h"
+#include <string.h>
 #include "assert.h"
-#include "common/string.h"
 #include "idt.h"
 #include "pic.h"
 #include "registers.h"
@@ -48,7 +48,7 @@ void irq::init() {
   idt::set_handler(PIC1_OFFSET + 14, &irq14);
   idt::set_handler(PIC1_OFFSET + 15, &irq15);
 
-  memzero(&handlers[0], HANDLERS_COUNT);
+  memset(&handlers[0], 0, HANDLERS_COUNT * sizeof(decltype(handlers[0])));
 }
 
 void irq::register_handler(uint8_t irq, void (*handler)(const registers_t *)) {

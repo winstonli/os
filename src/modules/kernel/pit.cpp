@@ -1,9 +1,10 @@
 #include "pit.h"
 #include "assert.h"
-#include "common/string.h"
 #include "irq.h"
 #include "registers.h"
 #include "terminal.h"
+
+#include <string.h>
 
 #define PIT_IRQ 0
 
@@ -87,9 +88,9 @@ static void pit_start_counter(uint16_t freq, uint8_t counter_id,
 void pit::init() {
   irq::register_handler(PIT_IRQ, &pit_handler);
 
-  memzero(&handlers[0], MAX_HANDLERS);
+  memset(&handlers[0], 0, MAX_HANDLERS * sizeof(decltype(handlers[0])));
   handler_count = 0;
-  memzero(&pit_frequency[0], 3);
+  memset(&pit_frequency[0], 0, 3 * sizeof(decltype(pit_frequency[0])));
   ticks = 0;
 
   pit_start_counter(1000, 0, pit_mode_t::SQUARE_WAVE);

@@ -1,10 +1,10 @@
 #include "keyboard.h"
-#include "common/string.h"
 #include "irq.h"
 #include "registers.h"
 #include "terminal.h"
 
 #include <limits.h>
+#include <string.h>
 
 #define IRQ_PS2_KEYBOARD 1
 
@@ -26,7 +26,7 @@ static void keyboard_handler(const registers_t *regs UNUSED) {
 void keyboard::init() {
   irq::register_handler(IRQ_PS2_KEYBOARD, &keyboard_handler);
 
-  memzero(&scancodes[0], NUM_SCANCODES);
+  memset(&scancodes[0], 0, NUM_SCANCODES * sizeof(char));
 
   scancodes[0x2] = '1';
   scancodes[0x3] = '2';

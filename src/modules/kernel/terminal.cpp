@@ -1,8 +1,8 @@
 #include "terminal.h"
 #include "common/common.h"
-#include "common/string.h"
 
 #include <stdarg.h>
+#include <string.h>
 
 #define TEXT_VIDEO_MEMORY \
   ((volatile uint16_t *)((int64_t)0xb8000 + 0xffff'ffff'8000'0000))
@@ -21,7 +21,8 @@ STATIC int cursor_state_stack_idx;
 
 void terminal::init() {
   cursor_state_stack_idx = 0;
-  memzero(&cursor_state_stack[0], CURSOR_STATE_STACK_MAX_SIZE);
+  memset(&cursor_state_stack[0], 0,
+         CURSOR_STATE_STACK_MAX_SIZE * sizeof(decltype(cursor_state_stack[0])));
   terminal::pop_cursor_state();  // initialise to default state
 
   // disable cursor
@@ -60,11 +61,11 @@ void terminal::pop_cursor_state(void) {
 // does _NOT_ change the position of the cursor
 void terminal_scrollback() {
   // shift everything up a row
-  memcpy(TEXT_VIDEO_MEMORY, TEXT_VIDEO_MEMORY + TEXT_NUM_COLS,
-         TEXT_NUM_COLS * (TEXT_NUM_ROWS - 1));
+  memcpy_volatile(TEXT_VIDEO_MEMORY, TEXT_VIDEO_MEMORY + TEXT_NUM_COLS,
+                  TEXT_NUM_COLS * (TEXT_NUM_ROWS - 1) * sizeof(uint16_t));
   // clear the last row
-  memzero(TEXT_VIDEO_MEMORY + TEXT_NUM_COLS * (TEXT_NUM_ROWS - 1),
-          TEXT_NUM_COLS);
+  memset_volatile(TEXT_VIDEO_MEMORY + TEXT_NUM_COLS * (TEXT_NUM_ROWS - 1), 0,
+                  TEXT_NUM_COLS * sizeof(uint16_t));
 }
 
 void terminal::putchar(char ch) {
@@ -232,5 +233,6 @@ void terminal::clear() {
   auto &elem = cursor_state_stack[cursor_state_stack_idx];
   elem.x = 0;
   elem.y = 0;
-  memzero(TEXT_VIDEO_MEMORY, TEXT_NUM_ROWS * TEXT_NUM_COLS * 2);
+  memset_volatile(TEXT_VIDEO_MEMORY, 0,
+                  TEXT_NUM_ROWS * TEXT_NUM_COLS * sizeof(uint16_t));
 }
