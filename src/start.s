@@ -5,8 +5,6 @@
 ; kernel itself so only this file has to deal with the additional complexity
 ; of handling both modes.
 
-%define DEBUG
-
 [bits 32]
 extern link_text_start ; all defined by linker script of `filename.ld`,
 extern link_data_end
@@ -129,16 +127,7 @@ pm32_putchar:
   mov [ecx], dx
   add ecx, 2
   ret
-pm32_putstrln:
-  mov edx, ecx
-  mov ecx, TEXT_SCREEN_ROW
-  imul ecx, [current_line]
-  add ecx, TEXT_SCREEN_MEMORY
-  mov eax, [current_line]
-  inc eax
-  mov [current_line], eax
-  call pm32_putstr
-  ret
+
 ; print the \0-terminated string given by edx to the screen at position given
 ; by ecx, returning edx pointing to the end of the string and ecx pointing to
 ; the screen at the position after the final character
@@ -152,6 +141,17 @@ pm32_putstr:
   add edx, 1
   jmp pm32_putstr
 .done:
+  ret
+
+pm32_putstrln:
+  mov edx, ecx
+  mov ecx, TEXT_SCREEN_ROW
+  imul ecx, [current_line]
+  add ecx, TEXT_SCREEN_MEMORY
+  mov eax, [current_line]
+  inc eax
+  mov [current_line], eax
+  call pm32_putstr
   ret
 
 %ifdef DEBUG
@@ -463,6 +463,8 @@ start:
 .valid_module_start_addr:
   push edi ; push module start address
 
+
+%ifdef DEBUG
   mov ecx, empty_str
   call pm32_putstrln
   mov ecx, self_start_str
@@ -498,6 +500,7 @@ start:
   call pm32_puthex
   mov ecx, empty_str
   call pm32_putstrln
+%endif
 
   ; set up paging
   ; (see http://wiki.osdev.org/Setting_Up_Long_Mode#Setting_up_the_Paging)
@@ -587,6 +590,8 @@ HIGH_ADDR_OFFSET equ 0xffffffff80000000
   mov edx, [module.mod_end]
   call pm32_align_up
   mov esi, eax
+
+%ifdef DEBUG
   mov ecx, empty_str
   call pm32_putstrln
   mov ecx, empty_str
@@ -594,7 +599,6 @@ HIGH_ADDR_OFFSET equ 0xffffffff80000000
   mov edx, esi
   call pm32_puthex
 
-%ifdef DEBUG
   ; debug: tell the user we've set up paging
   mov ecx, paging_set_up_str
   call pm32_putstrln
@@ -635,16 +639,7 @@ lm64_putchar:
   mov [rcx], dx
   add rcx, 2
   ret
-lm64_putstrln:
-  mov rdx, rcx
-  mov rcx, TEXT_SCREEN_ROW
-  imul rcx, [current_line]
-  add rcx, TEXT_SCREEN_MEMORY
-  mov rax, [current_line]
-  inc rax
-  mov [current_line], rax
-  call lm64_putstr
-  ret
+
 lm64_putstr:
   cmp byte [rdx], 0
   je .done
@@ -655,6 +650,17 @@ lm64_putstr:
   add rdx, 1
   jmp lm64_putstr
 .done:
+  ret
+
+lm64_putstrln:
+  mov rdx, rcx
+  mov rcx, TEXT_SCREEN_ROW
+  imul rcx, [current_line]
+  add rcx, TEXT_SCREEN_MEMORY
+  mov rax, [current_line]
+  inc rax
+  mov [current_line], rax
+  call lm64_putstr
   ret
 
 lm64_puthexdigit:
@@ -737,10 +743,12 @@ realm64: ; from here on we are officially (like, actually) in long mode!
   or rdi, PAGE_WRITABLE | PAGE_PRESENT
   mov qword [page_table.l3_v], rdi
 
+%ifdef DEBUG
   mov rcx, empty_str
   call lm64_putstrln
   mov rdx, rsp
   call lm64_puthex
+%endif
 
   ; add HIGH_ADDR_OFFSET to rsp and rip
   ; we set rip by adding HIGH_ADDR_OFFSET to the below label
@@ -768,9 +776,7 @@ realm64: ; from here on we are officially (like, actually) in long mode!
   pop rax
   mov rdx, rax
   call lm64_puthex
-%endif
 
-%ifdef DEBUG
   ; debug: check that hex printing works for "negative" numbers (msb set)
   mov rcx, empty_str
   call lm64_putstrln
@@ -780,14 +786,14 @@ realm64: ; from here on we are officially (like, actually) in long mode!
   call lm64_putstrln
   mov rdx, page_table.l3
   call lm64_puthex
-%endif
-  ; unset identity mapping values
 
   mov rcx, empty_str
   call lm64_putstrln
   mov edx, [rsp]
   call lm64_puthex
+%endif
 
+  ; unset identity mapping values
   mov rdi, page_table.l4
   add rdi, HIGH_ADDR_OFFSET
   mov dword [rdi], 0
@@ -818,6 +824,7 @@ realm64: ; from here on we are officially (like, actually) in long mode!
   ; the module other than its load address, we're hoping that the module has
   ; a trampoline or equivalent at the beginning of the module that will kindly
   ; redirect us to where we actually want to go.
+
   call rax
 
   ; if we return from that then all we can do is disable interrupts and hang
@@ -826,6 +833,8 @@ realm64: ; from here on we are officially (like, actually) in long mode!
 
 section .data
 %ifdef DEBUG
+empty_str:
+  dq 0
 hello_world_str:
   db "Hello World!", 0
 instruction_ptr_str:
@@ -838,7 +847,6 @@ paging_set_up_str:
   db "Finished setting up 64-bit paging!", 0
 edi_mod_start_str:
   db "edi (mod_start): ", 0
-%endif
 self_start_str:
   db "self start = ", 0
 self_end_str:
@@ -853,6 +861,7 @@ mod_struct_start_str:
   db "mod_start = ", 0
 mod_struct_end_str:
   db "mod_end = ", 0
+%endif
 hex_digit_lookup_str:
   db "0123456789abcdef", 0
 error_wrong_magic_str:
@@ -863,8 +872,6 @@ error_no_long_mode_str:
   db "Error: Long mode does not appear to be supported!", 0
 error_no_kernel_module_str:
   db "Error: No valid kernel module appears to have been loaded!", 0
-empty_str:
-  dq 0
 
 current_line:
   dq 0
