@@ -36,9 +36,15 @@ public:
      addresses in the direct virtual mapping (direct_virtual_offset).
    */
 
-  static void *paddr_to_vaddr(void *paddr);
+  template<typename T>
+  static T *paddr_to_vaddr(T *paddr) {
+    return static_cast<T*>(paddr_to_vaddr(static_cast<void*>(paddr)));
+  }
 
-  static void *vaddr_to_paddr(void *vaddr);
+  template<typename T>
+  static T *vaddr_to_paddr(T *vaddr) {
+    return static_cast<T*>(vaddr_to_paddr(static_cast<void*>(vaddr)));
+  }
 
   /*
      These functions translate between physical addresses and
@@ -103,3 +109,10 @@ public:
   static uintptr_t num_frames_2m(uintptr_t num_bytes);
 
 };
+
+template<>
+void *vm::paddr_to_vaddr<void>(void *paddr);
+
+template<>
+void *vm::vaddr_to_paddr<void>(void *vaddr);
+

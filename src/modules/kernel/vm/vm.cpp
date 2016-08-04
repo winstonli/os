@@ -1,10 +1,14 @@
 #include "vm.h"
 
+template <>
 void *vm::paddr_to_vaddr(void *paddr) {
+  if (paddr == nullptr) return nullptr;
   return static_cast<char *>(paddr) + direct_virtual_offset;
 }
 
+template <>
 void *vm::vaddr_to_paddr(void *vaddr) {
+  if (vaddr == nullptr) return nullptr;
   return static_cast<char *>(vaddr) - direct_virtual_offset;
 }
 
