@@ -11,8 +11,8 @@
 extern link_text_start ; all defined by linker script of `filename.ld`,
 extern link_data_end
 extern link_bss_end
-extern link_kernel_start
-extern link_kernel_end
+extern link_loader_start
+extern link_loader_end
 
 ; references to multiboot spec refer to version 1.6:
 ; http://download-mirror.savannah.gnu.org/releases/grub/phcoder/multiboot.pdf
@@ -467,11 +467,11 @@ start:
   call pm32_putstrln
   mov ecx, self_start_str
   call pm32_putstrln
-  mov edx, link_kernel_start
+  mov edx, link_loader_start
   call pm32_puthex
   mov ecx, self_end_str
   call pm32_putstrln
-  mov edx, link_kernel_end
+  mov edx, link_loader_end
   call pm32_puthex
 
   mov ecx, empty_str
@@ -519,7 +519,7 @@ PAGE_PS equ 1 << 7
 ; once the higher half addressing is activated (equiv. to -2 GiB unsigned)
 HIGH_ADDR_OFFSET equ 0xffffffff80000000
 
-  mov ecx, link_kernel_end
+  mov ecx, link_loader_end
   mov edx, [module.mod_end]
   call pm32_max
 
@@ -812,8 +812,8 @@ realm64: ; from here on we are officially (like, actually) in long mode!
   mov edi, dword [rsp+8] ; magic
   mov esi, dword [rsp+4] ; info
   add rsi, HIGH_ADDR_OFFSET ; convert info physical addr to virtual addr
-  mov edx, link_kernel_start
-  mov ecx, link_kernel_end
+  mov edx, link_loader_start
+  mov ecx, link_loader_end
   ; ...and jump straight to it! (note that since we don't know anything about
   ; the module other than its load address, we're hoping that the module has
   ; a trampoline or equivalent at the beginning of the module that will kindly
@@ -868,8 +868,6 @@ empty_str:
 
 current_line:
   dq 0
-kernel_num_pages_2m:
-  dd 0
 
 module:
 .type:

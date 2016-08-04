@@ -2,8 +2,7 @@ OUTPUT_FORMAT(binary)
 SECTIONS
 {
   . = 0x00100000;
-  /* You can use extern link_kernel_start in C to find where your kernel starts */
-  link_kernel_start = .;
+  link_loader_start = .;
 
   /* Multiboot header must be in the first 4K of the kernel */
   link_multiboot_start = .;
@@ -34,5 +33,5 @@ SECTIONS
   }
   link_bss_end = .;
   /* You can use extern link_kernel_end in C to find where your kernel ends */
-  link_kernel_end = .;
+  link_loader_end = .;
 }
