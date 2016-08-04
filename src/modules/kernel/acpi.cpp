@@ -12,8 +12,7 @@ struct PACKED rsdp_descriptor {
   uint32_t rsdt_paddr;  // address of root system description table
 };
 
-struct PACKED rsdp_descriptor_v2 {
-  rsdp_descriptor first;
+struct PACKED rsdp_descriptor_v2 : rsdp_descriptor {
   uint32_t length;
   uint64_t xsdt_paddr;
   uint8_t ext_checksum;
@@ -96,7 +95,7 @@ static rsdt_result_t find_rsdt() {
       rsdt_paddr = rsdp_vaddr->rsdt_paddr;
       break;
     case 2: {
-      auto rsdp2_ptr = reinterpret_cast<rsdp_descriptor_v2 *>(rsdp_vaddr);
+      auto rsdp2_ptr = static_cast<rsdp_descriptor_v2 *>(rsdp_vaddr);
 
       // do rsdp v2 checksum
       uint8_t checksum2_result =
@@ -123,8 +122,7 @@ static rsdt_result_t find_rsdt() {
   return {rsdt_vaddr, rsdp_vaddr->revision != 0};
 }
 
-struct PACKED acpi_madt_header_t {
-  acpi_sdt_header_t header;
+struct PACKED acpi_madt_header_t : acpi_sdt_header_t {
   uint32_t local_controller_paddr;
   uint32_t flags;  // 1 = dual legacy pics installed
 };
@@ -147,15 +145,13 @@ struct PACKED acpi_madt_entry_t {
 };
 STATIC_ASSERT(sizeof(acpi_madt_entry_t) == 2 * sizeof(uint8_t));
 
-struct PACKED acpi_madt_proc_local_entry_t {
-  acpi_madt_entry_t header;
+struct PACKED acpi_madt_proc_local_entry_t : acpi_madt_entry_t {
   uint8_t processor_id;
   uint8_t apic_id;
   uint32_t flags;  // 1 = processor enabled
 };
 
-struct PACKED acpi_madt_io_apic_entry_t {
-  acpi_madt_entry_t header;
+struct PACKED acpi_madt_io_apic_entry_t : acpi_madt_entry_t {
   uint8_t io_apic_id;
   uint8_t reserved;  // zeroed
   uint32_t io_apic_paddr;
@@ -175,7 +171,7 @@ static acpi_madt_header_t *find_madt(const rsdt_result_t &rsdt) {
           reinterpret_cast<acpi_sdt_header_t *>(paddr_ptrs[i]));
       klog_debug("Entry %d has signature %s", i, ptr_vaddr->signature);
       if (memcmp(ptr_vaddr->signature, "APIC", 4) == 0) {
-        return reinterpret_cast<acpi_madt_header_t *>(ptr_vaddr);
+        return static_cast<acpi_madt_header_t *>(ptr_vaddr);
       }
     }
   } else {
@@ -188,7 +184,7 @@ static acpi_madt_header_t *find_madt(const rsdt_result_t &rsdt) {
           reinterpret_cast<acpi_sdt_header_t *>(paddr_ptrs[i]));
       klog_debug("Entry %d has signature %s", i, ptr_vaddr->signature);
       if (memcmp(ptr_vaddr->signature, "APIC", 4) == 0) {
-        return reinterpret_cast<acpi_madt_header_t *>(ptr_vaddr);
+        return static_cast<acpi_madt_header_t *>(ptr_vaddr);
       }
     }
   }
@@ -200,29 +196,27 @@ static void parse_madt(const acpi_madt_header_t *madt_vaddr,
                        acpi::config_t *config) {
   auto madt_base_vaddr = reinterpret_cast<const char *>(madt_vaddr);
   auto madt_entry_vaddr = reinterpret_cast<const char *>(&madt_vaddr[1]);
-  while (madt_entry_vaddr < madt_base_vaddr + madt_vaddr->header.length) {
+  while (madt_entry_vaddr < madt_base_vaddr + madt_vaddr->length) {
     auto madt_entry =
         reinterpret_cast<const acpi_madt_entry_t *>(madt_entry_vaddr);
 
     switch (madt_entry->type) {
       case APIC_MADT_PROCESSOR_LOCAL_APIC: {
         auto entry =
-            reinterpret_cast<const acpi_madt_proc_local_entry_t *>(madt_entry);
+            static_cast<const acpi_madt_proc_local_entry_t *>(madt_entry);
         klog_debug("MADT PL entry (proc id=%d, apic id=%d, enabled=%s)",
                    entry->processor_id, entry->apic_id,
                    entry->flags & 0x1 ? "yes" : "no");
         break;
       }
       case APIC_MADT_IO_APIC: {
-        auto entry =
-            reinterpret_cast<const acpi_madt_io_apic_entry_t *>(madt_entry);
-        auto paddr = entry->io_apic_paddr;
-        auto vaddr = vm::paddr_to_vaddr(reinterpret_cast<void *>(paddr));
+        auto entry = static_cast<const acpi_madt_io_apic_entry_t *>(madt_entry);
+        auto vaddr = vm::paddr_to_vaddr(entry->io_apic_paddr);
         klog_debug(
             "MADT IOAPIC entry (apic id=%d, paddr=%x, interrupt base=%x)",
             entry->io_apic_id, entry->io_apic_paddr,
             entry->global_interrupt_base);
-        config->ioapic_base_vaddr = reinterpret_cast<uint64_t>(vaddr);
+        config->ioapic_base_vaddr = vaddr;
         break;
       }
       default:

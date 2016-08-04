@@ -12,6 +12,16 @@ void *vm::vaddr_to_paddr(void *vaddr) {
   return static_cast<char *>(vaddr) - direct_virtual_offset;
 }
 
+uintptr_t vm::paddr_to_vaddr(uintptr_t paddr) {
+  return reinterpret_cast<uintptr_t>(
+      paddr_to_vaddr(reinterpret_cast<void *>(paddr)));
+}
+
+uintptr_t vm::vaddr_to_paddr(uintptr_t vaddr) {
+  return reinterpret_cast<uintptr_t>(
+      vaddr_to_paddr(reinterpret_cast<void *>(vaddr)));
+}
+
 void *vm::paddr_to_ptvaddr(void *paddr) {
   return static_cast<char *>(paddr) + pt_offset;
 }

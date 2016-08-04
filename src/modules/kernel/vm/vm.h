@@ -46,6 +46,10 @@ public:
     return static_cast<T*>(vaddr_to_paddr(static_cast<void*>(vaddr)));
   }
 
+  static uintptr_t paddr_to_vaddr(uintptr_t paddr);
+
+  static uintptr_t vaddr_to_paddr(uintptr_t vaddr);
+
   /*
      These functions translate between physical addresses and
      addresses in the page table space (pt_offset).
