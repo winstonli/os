@@ -4,6 +4,7 @@
 *.bin
 *.iso
 start
+!src/start
 kernel.iso
 *.log
 iso/
