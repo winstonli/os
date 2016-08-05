@@ -66,7 +66,7 @@ multiboot_header:
 ; we should technically have an information request here for modules, but
 ; since grub provides it regardless we omit it for now. (similarly we may
 ; also want to have aligned modules, unsure)
-.tags:
+tags:
 align MULTIBOOT_ALIGNMENT, db 0
 .addr_tag:  ; specify important addresses so grub loads us correctly (3.1.5)
   dw TAG_TYPE_ADDRESS
@@ -286,6 +286,7 @@ pm32_check_long_mode_supported:
   call pm32_putstr
   jmp hang
 
+; eax set to the greater of edx and ecx
 pm32_max:
   cmp ecx, edx
   jl .lt
@@ -408,12 +409,6 @@ start:
 
   jne .not_module
 
-  mov edx, [esi + 0 * 4]
-  mov [module.type], edx
-  mov edx, [esi + 1 * 4]
-  mov [module.size], edx
-  mov edx, [esi + 2 * 4]
-  mov [module.mod_start], edx
   mov edx, [esi + 3 * 4]
   mov [module.mod_end], edx
   lea edx, [esi + 4 * 4]
@@ -428,6 +423,10 @@ start:
   call pm32_putstrln
   mov edx, edi
   call pm32_puthex
+  mov dl, ' '
+  call pm32_putchar
+  mov edx, [module.string]
+  call pm32_putstr
 %endif
 
   jmp .parse_multiboot_header_next
@@ -475,18 +474,6 @@ start:
   call pm32_putstrln
   mov edx, [module.string]
   call pm32_putstr
-  mov ecx, mod_struct_type_str
-  call pm32_putstrln
-  mov edx, [module.type]
-  call pm32_puthex
-  mov ecx, mod_struct_size_str
-  call pm32_putstrln
-  mov edx, [module.size]
-  call pm32_puthex
-  mov ecx, mod_struct_start_str
-  call pm32_putstrln
-  mov edx, [module.mod_start]
-  call pm32_puthex
   mov ecx, mod_struct_end_str
   call pm32_putstrln
   mov edx, [module.mod_end]
@@ -844,12 +831,6 @@ self_end_str:
   db "self end = ", 0
 mod_struct_str:
   db "Found module: ", 0
-mod_struct_type_str:
-  db "type = ", 0
-mod_struct_size_str:
-  db "size = ", 0
-mod_struct_start_str:
-  db "mod_start = ", 0
 mod_struct_end_str:
   db "mod_end = ", 0
 %endif
@@ -868,12 +849,6 @@ current_line:
   dq 0
 
 module:
-.type:
-  dd 0
-.size:
-  dd 0
-.mod_start:
-  dd 0
 .mod_end:
   dd 0
 .string:
