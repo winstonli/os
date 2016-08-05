@@ -194,6 +194,7 @@ void terminal::printf(const char *format, ...) {
         got_large = true;
         break;
       case 's': {
+        // TODO: need to check we can actually print this without page faulting
         auto arg = va_arg(params, const char *);
         terminal::write(arg);
         got_percent = false;

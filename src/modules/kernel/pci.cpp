@@ -1,4 +1,6 @@
 #include "pci.h"
+#include <string.h>
+#include "assert.h"
 #include "common/common.h"
 #include "log.h"
 
@@ -7,29 +9,19 @@
 #define PCI_COMMAND_OFFSET 0x4
 #define PCI_STATUS_OFFSET 0x6
 #define PCI_REVISION_ID_OFFSET 0x8
-#define PCI_REVISION_ID_MASK 0x00ff
-#define PCI_REVISION_ID_SHIFT 0
-#define PCI_PROG_IF_OFFSET 0x8
-#define PCI_PROG_IF_MASK 0xff00
-#define PCI_PROG_IF_SHIFT 8
+#define PCI_PROG_IF_OFFSET 0x9
 #define PCI_SUBCLASS_OFFSET 0xa
-#define PCI_SUBCLASS_MASK 0x00ff
-#define PCI_SUBCLASS_SHIFT 0
-#define PCI_CLASS_CODE_OFFSET 0xa
-#define PCI_CLASS_CODE_MASK 0xff00
-#define PCI_CLASS_CODE_SHIFT 8
+#define PCI_CLASS_CODE_OFFSET 0xb
 
 #define PCI_HEADER_TYPE_OFFSET 0xe
-#define PCI_HEADER_TYPE_MASK 0x00ff
-#define PCI_HEADER_TYPE_SHIFT 0
 
-#define PCI_SECONDARY_BUS_OFFSET 0x18
-#define PCI_SECONDARY_BUS_MASK 0xff00
-#define PCI_SECONDARY_BUS_SHIFT 8
+#define PCI_BAR_BASE 0x10
+
+#define PCI_SECONDARY_BUS_OFFSET 0x19
 
 // see http://wiki.osdev.org/PCI#Configuration_Space_Access_Mechanism_.231
-uint16_t pci_config_read_word(uint8_t bus, uint8_t device, uint8_t function,
-                              uint8_t offset) {
+uint32_t pci_read_dword(uint8_t bus, uint8_t device, uint8_t function,
+                        uint8_t offset) {
   uint32_t lbus = (uint32_t)bus;
   uint32_t ldevice = (uint32_t)device;
   uint32_t lfunction = (uint32_t)function;
@@ -39,53 +31,76 @@ uint16_t pci_config_read_word(uint8_t bus, uint8_t device, uint8_t function,
                             (offset & 0xfc) | ((uint32_t)0x80000000));
 
   // write out the address */
-  out<uint32_t>(0xCF8, address);
+  out<uint32_t>(0xCf8, address);
   // read in the data
-  // (offset & 2) * 8) = 0 will choose the first word of the 32 bits register
-  return in<uint32_t>(0xCFC) >> ((offset & 2) * 8);
+  return in<uint32_t>(0xcfc);
+}
+
+uint16_t pci_read_word(uint8_t bus, uint8_t device, uint8_t function,
+                       uint8_t offset) {
+  uint32_t data = pci_read_dword(bus, device, function, offset & ~0x3);
+  return data >> ((offset & 0x2) * 8);
+}
+
+uint8_t pci_read_byte(uint8_t bus, uint8_t device, uint8_t function,
+                      uint8_t offset) {
+  uint16_t data = pci_read_word(bus, device, function, offset & ~0x1);
+  return data >> ((offset & 0x1) * 8);
 }
 
 uint16_t pci_get_vendor_id(uint8_t bus, uint8_t device, uint8_t function) {
-  return pci_config_read_word(bus, device, function, PCI_VENDOR_ID_OFFSET);
+  return pci_read_word(bus, device, function, PCI_VENDOR_ID_OFFSET);
 }
 
 uint8_t pci_get_prog_if(uint8_t bus, uint8_t device, uint8_t function) {
-  auto c = pci_config_read_word(bus, device, function, PCI_PROG_IF_OFFSET);
-  return (c & PCI_PROG_IF_MASK) >> PCI_PROG_IF_SHIFT;
+  return pci_read_byte(bus, device, function, PCI_PROG_IF_OFFSET);
 }
 
 uint8_t pci_get_base_class(uint8_t bus, uint8_t device, uint8_t function) {
-  auto c = pci_config_read_word(bus, device, function, PCI_CLASS_CODE_OFFSET);
-  return (c & PCI_CLASS_CODE_MASK) >> PCI_CLASS_CODE_SHIFT;
+  return pci_read_byte(bus, device, function, PCI_CLASS_CODE_OFFSET);
 }
 
 uint8_t pci_get_subclass(uint8_t bus, uint8_t device, uint8_t function) {
-  auto c = pci_config_read_word(bus, device, function, PCI_SUBCLASS_OFFSET);
-  return (c & PCI_SUBCLASS_MASK) >> PCI_SUBCLASS_SHIFT;
+  return pci_read_byte(bus, device, function, PCI_SUBCLASS_OFFSET);
 }
 
 uint8_t pci_get_header_type(uint8_t bus, uint8_t device, uint8_t function) {
-  auto c = pci_config_read_word(bus, device, function, PCI_HEADER_TYPE_OFFSET);
-  return (c & PCI_HEADER_TYPE_MASK) >> PCI_HEADER_TYPE_SHIFT;
+  return pci_read_byte(bus, device, function, PCI_HEADER_TYPE_OFFSET);
 }
 
 uint8_t pci_get_secondary_bus(uint8_t bus, uint8_t device, uint8_t function) {
-  auto c =
-      pci_config_read_word(bus, device, function, PCI_SECONDARY_BUS_OFFSET);
-  return (c & PCI_SECONDARY_BUS_MASK) >> PCI_SECONDARY_BUS_SHIFT;
+  return pci_read_byte(bus, device, function, PCI_SECONDARY_BUS_OFFSET);
 }
 
 static const char* pci_get_device_type_str(uint8_t base_class, uint8_t subclass,
                                            uint8_t prog_if);
 static void pci_check_bus(uint8_t bus);
 
+#define MAX_DEVICE_HANDLERS 16
+
+STATIC pci::device_handler* handlers[MAX_DEVICE_HANDLERS];
+STATIC uint8_t handler_count;
+
 static void pci_check_function(uint8_t bus, uint8_t device, uint8_t function) {
   auto base_class = pci_get_base_class(bus, device, function);
   auto subclass = pci_get_subclass(bus, device, function);
   auto prog_if = pci_get_prog_if(bus, device, function);
   auto device_type_str = pci_get_device_type_str(base_class, subclass, prog_if);
+  auto header_type = pci_get_header_type(bus, device, function);
   klog_debug("Found device (code %x/%x/%x) (%s)", base_class, subclass, prog_if,
              device_type_str);
+  if (header_type == 0x00) {
+    auto bar0 = pci_read_dword(bus, device, function, PCI_BAR_BASE + 0x0);
+    auto bar1 = pci_read_dword(bus, device, function, PCI_BAR_BASE + 0x4);
+    auto bar2 = pci_read_dword(bus, device, function, PCI_BAR_BASE + 0x8);
+    auto bar3 = pci_read_dword(bus, device, function, PCI_BAR_BASE + 0xc);
+    auto bar4 = pci_read_dword(bus, device, function, PCI_BAR_BASE + 0x10);
+    klog_debug("  BARs: %x,%x,%x,%x,%x", bar0, bar1, bar2, bar3, bar4);
+  }
+  for (decltype(handler_count) i = 0; i < handler_count; ++i) {
+    handlers[i]->init_device(
+        {bus, device, function, base_class, subclass, prog_if});
+  }
   if ((base_class == 0x06) && (subclass == 0x04)) {
     uint8_t secondary_bus = pci_get_secondary_bus(bus, device, function);
     pci_check_bus(secondary_bus);
@@ -134,8 +149,20 @@ static void pci_check_all_buses() {
 }
 
 void pci::init() {
+  handler_count = 0;
+  memset(handlers, 0, MAX_DEVICE_HANDLERS * sizeof(handlers[0]));
+}
+
+void pci::scan() {
   klog_debug("Scanning for PCI devices...");
   pci_check_all_buses();
+}
+
+void register_handler(pci::device_handler* handler) {
+  assert(handler_count < MAX_DEVICE_HANDLERS);
+  assert(handler != nullptr);
+
+  handlers[handler_count++] = handler;
 }
 
 const char* pci_get_device_type_str(uint8_t base_class, uint8_t subclass,

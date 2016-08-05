@@ -64,6 +64,9 @@ extern "C" void kernel_main(const uint32_t multiboot_magic,
   ioapic::init(config);
   lapic::init();
 
+  // need to register any pci controllers before here, or re-scan
+  pci::scan();
+
 #ifdef RUN_TESTS
   test_get_content(0, nullptr);
 #endif
