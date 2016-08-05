@@ -111,6 +111,7 @@ section .text
 TEXT_SCREEN_MEMORY equ 0xb8000 ; address of the text screen video memory
                                ; (80x25 w/ one byte each for colour and ascii)
 TEXT_SCREEN_ROW equ 80 * 2 ; 80 characters wide, 2 bytes per character
+TEXT_SCREEN_NUM_ROWS equ 25
 TEXT_WHITE_ON_BLACK equ 0x07
 
 ; note on calling conventions:
@@ -321,12 +322,6 @@ pm32_align_up:
   mov eax, edi
   ret
 
-; TODO: we should really have some kind of guard to ensure this does not
-; accidentally overflow into somewhere important!
-; We have 3 page tables (1 KiB each) at the top of the stack
-STACK_SIZE equ 0x1000000
-STACK_RESERVED equ 0x5 * 0x1000
-
 ; the value of eax when we get control of the machine from grub (see 3.3)
 MULTIBOOT_EXPECTED_MAGIC equ 0x36d76289
 
@@ -334,7 +329,8 @@ MULTIBOOT_EXPECTED_MAGIC equ 0x36d76289
 ;; ENTRY POINT ;;
 ;;;;;;;;;;;;;;;;;
 start:
-  mov esp, stack + STACK_SIZE - STACK_RESERVED ; setup stack
+  ; setup stack
+  mov esp, stack_top
 
   ; state of the machine at this point: (see section 3.3 for more details)
   ; eax contains multiboot magic value (MULTIBOOT_EXPECTED_MAGIC)
@@ -362,7 +358,7 @@ start:
 .clearscreen:
   mov edx, 0
   call pm32_putchar
-  cmp ecx, TEXT_SCREEN_MEMORY + 80 * 24 * 2
+  cmp ecx, TEXT_SCREEN_MEMORY + TEXT_SCREEN_ROW * TEXT_SCREEN_NUM_ROWS
   jne .clearscreen
 
 %ifdef DEBUG
@@ -393,15 +389,13 @@ start:
   pop edx
   push edx
   call pm32_puthex
-
 %endif
 
   ; read and parse multiboot information, looking for modules to jump to
   ; once we have gotten into long mode. (see section 3.4.2 through 3.4.12, but
   ; specifically we are interested in modules as described by 3.4.6)
-  pop edx ; multiboot information
-  push edx
-  lea esi, [edx + 8] ; start of multiboot information tags
+  mov esi, [esp] ; multiboot information
+  add esi, 8   ; start of multiboot information tags
   xor edi, edi ; zero out module start address so we can check we actually
                ; found one later!
 
@@ -427,7 +421,8 @@ start:
 
   mov edi, [esi+2*4] ; module start, store in edi so we can jump to it
                      ; once we enter 64-bit mode!
-  
+  mov [kernel_paddr], edi
+
 %ifdef DEBUG
   mov ecx, edi_mod_start_str
   call pm32_putstrln
@@ -455,14 +450,12 @@ start:
 .parse_multiboot_header_end:
 
   ; check that we found a good start address
-  cmp edi, 0
+  cmp dword [kernel_paddr], 0
   jne .valid_module_start_addr
   mov ecx, error_no_kernel_module_str
   call pm32_putstrln
   jmp hang
 .valid_module_start_addr:
-  push edi ; push module start address
-
 
 %ifdef DEBUG
   mov ecx, empty_str
@@ -800,23 +793,21 @@ realm64: ; from here on we are officially (like, actually) in long mode!
 
   invlpg [TEXT_SCREEN_MEMORY] ; invalidate something in the old address range
 
-  ; load our module address (as placed on the stack by us at
-  ; .valid_module_start_addr), debug print it out...
-  xor rax, rax
-  mov eax, [rsp]
-  mov rdx, HIGH_ADDR_OFFSET
-  add rax, rdx
+  ; load our module address (as placed at kernel_paddr by us at
+  ; .valid_module_start_addr)
+  mov rdx, kernel_paddr
+  add rdx, HIGH_ADDR_OFFSET ; convert address of kernel_paddr to vaddr
+  mov eax, [rdx] ; filling eax clears top 32 bits as well
+  add rax, HIGH_ADDR_OFFSET ; convert kernel_paddr itself to vaddr
 
   ; at this point (hopefully)
-  ; [rsp+0] = module physical address
-  ; [rsp+4] = information structure physical address
-  ; [rsp+8] = multiboot2 magic value
+  ; [kernel_paddr] = kernel physical address (see a couple of lines above)
+  ; [rsp+0] = information structure physical address
+  ; [rsp+4] = multiboot2 magic value
   ; load arguments 1/2 with the magic and information structure (in the right
   ; address space of course!) and jump to the module address
-  xor rdi, rdi ; zero out the high 32-bits of rdi/rsi
-  xor rsi, rsi
-  mov edi, dword [rsp+8] ; magic
-  mov esi, dword [rsp+4] ; info
+  mov edi, dword [rsp+4] ; magic (also clears top 32-bits)
+  mov esi, dword [rsp+0] ; info (also clears top 32-bits)
   add rsi, HIGH_ADDR_OFFSET ; convert info physical addr to virtual addr
   mov edx, link_loader_start
   mov ecx, link_loader_end
@@ -888,6 +879,9 @@ module:
 .string:
   dd 0
 
+kernel_paddr:
+  dd 0
+
 ; global descriptor table
 ; (see http://wiki.osdev.org/Setting_Up_Long_Mode#Entering_the_64-bit_Submode)
 ; (see http://wiki.osdev.org/Global_Descriptor_Table)
@@ -927,20 +921,26 @@ gdt64:                ; global descriptor table (64-bit).
 ; being in the file at all
 section .bss
 
+; TODO: we should really have some kind of guard to ensure this does not
+; accidentally overflow into somewhere important!
+; We have 5 page tables (1 KiB each) at the top of the stack
+STACK_SIZE equ 0x1000000
+
+; reserve us some stack space
+stack:
+  resb STACK_SIZE
+stack_top:
+
 ; page table space
 ; this is so we don't have to guess where we're allowed to put it
 ; each level of page table is 4 KiB (0x1000 B)
 
-; page tables must be page aligned. Let's align all 4 2 MiB pages of the stack,
-; minus 3 4 KiB chunks for the page tables
-
+; page tables must be page aligned.
 align 0x200000
 
-; reserve us some stack space
-stack:
 page_table:
 .l3_ident:
-  resb STACK_SIZE - STACK_RESERVED
+  resb 0x1000
 .l2_v:
   resb 0x1000
 .l3_v:
