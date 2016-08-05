@@ -55,7 +55,7 @@ kernel.iso: start grub.cfg $(MODULES)
 	cp $(MODULES) iso/boot/
 	grub-mkrescue -o $@ iso
 
-start: start.ld src/start.o
+start: src/start.ld src/start/start.o
 	$(LD) -T $^ $(LDFLAGS) -o $@
 
 %.o: %.s
@@ -64,7 +64,7 @@ start: start.ld src/start.o
 %.bin: %.elf
 	objcopy -O binary $< $@
 
-KERNEL_DEPS = module.ld src/modules/kernel/entry.o src/modules/kernel/main.o \
+KERNEL_DEPS = src/module.ld src/modules/kernel/entry.o src/modules/kernel/main.o \
             src/modules/kernel/assert.o \
             src/modules/kernel/acpi.o \
             src/modules/kernel/boot/multiboot_info.o \
